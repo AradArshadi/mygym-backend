@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block title %}Visit · myGym{% endblock %}
+{% block content %}
+<section class="customer-app-shell visit-page-shell">
+  <div class="container visit-container">
+    <header class="visit-page-header">
+      <div><p class="customer-eyebrow">Access and active sessions</p><h1>Visit</h1></div>
+      <a class="customer-text-link" href="{% url 'my_sessions' %}">Sessions</a>
+    </header>
+
+    {% if active_visit %}
+      <article class="visit-active-panel">
+        <div class="customer-card-topline"><span class="customer-status-dot"></span><span>Active now</span><span class="customer-live-label">Live</span></div>
+        <h2>{{ active_visit.gym.name }}</h2>
+        <div class="visit-active-stats">
+          <div><span>Checked in</span><strong>{{ active_visit.checked_in_at|date:'H:i' }}</strong></div>
+          <div><span>Duration</span><strong>{{ active_visit.duration_minutes }} min</strong></div>
+          <div><span>Access</span><strong>{% if active_visit.subscription and active_visit.subscription.plan %}{{ active_visit.subscription.plan.title }}{% else %}Session{% endif %}</strong></div>
+        </div>
+        <div class="customer-primary-actions">
+          <a class="customer-btn customer-btn-light" href="{% url 'log_workout' %}">Log workout</a>
+          <form method="post" action="{% url 'checkout_visit' active_visit.id %}" onsubmit="return confirm('Finish this gym visit?');">{% csrf_token %}<button class="customer-btn customer-btn-outline-light" type="submit">Check out</button></form>
+        </div>
+      </article>
+    {% endif %}
+
+    {% for subscription in active_subscriptions %}
+      <article class="visit-pass-card {% if active_visit and active_visit.subscription_id == subscription.id %}is-in-use{% endif %}">
+        <div class="visit-pass-summary">
+          <div>
+            <div class="customer-card-topline"><span class="customer-status-dot"></span><span>Active membership</span>{% if subscription.days_remaining <= 7 %}<span class="customer-warning-label">{{ subscription.days_remaining }} days left</span>{% endif %}</div>
+            <p class="customer-card-caption">{{ subscription.plan.title|default:'Membership' }}</p>
+            <h2>{{ subscription.gym.name }}</h2>
+            <p class="customer-card-meta">Valid until {{ subscription.end_date|date:'d F Y' }}</p>
+          </div>
+          <div class="days-remaining-block {% if subscription.days_remaining <= 7 %}is-warning{% endif %}"><strong>{{ subscription.days_remaining }}</strong><span>days left</span></div>
+        </div>
+
+        {% if not active_visit or active_visit.subscription_id != subscription.id %}
+          <div class="visit-qr-section">
+            {% if subscription.qr_data_uri %}<img src="{{ subscription.qr_data_uri }}" alt="QR access pass for {{ subscription.gym.name }}" class="visit-qr-image">{% endif %}
+            <div class="visit-qr-copy"><strong>Show this code at reception</strong><span>For security, the pass refreshes every 24 hours.</span></div>
+          </div>
+          <div class="visit-pass-actions">
+            <a class="customer-btn customer-btn-dark" href="{{ subscription.qr_url }}">Open full-screen code</a>
+            <form method="post" action="{% url 'refresh_membership_qr' subscription.id %}">{% csrf_token %}<button class="customer-btn customer-btn-quiet" type="submit">Refresh code</button></form>
+          </div>
+        {% else %}
+          <div class="visit-pass-in-use">This pass is currently being used for your active visit.</div>
+        {% endif %}
+      </article>
+    {% empty %}
+      {% if not active_visit %}<div class="visit-empty-state"><span>Visit</span><h2>No active access pass</h2><p>Choose a membership plan and your secure visit pass will appear here after approval.</p><a class="customer-btn customer-btn-dark" href="{% url 'gym_list' %}">Explore gyms</a></div>{% endif %}
+    {% endfor %}
+
+    {% if closed_subscriptions %}
+      <details class="visit-history-panel">
+        <summary>Previous memberships <span>{{ closed_subscriptions|length }}</span></summary>
+        <div>{% for subscription in closed_subscriptions %}<div class="customer-list-item"><div class="customer-list-content"><strong>{{ subscription.gym.name }}</strong><span>{{ subscription.get_status_display }} · ended {{ subscription.end_date|date:'d M Y' }}</span></div><a class="customer-row-action" href="{% url 'gym_detail' subscription.gym.slug %}">View</a></div>{% endfor %}</div>
+      </details>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

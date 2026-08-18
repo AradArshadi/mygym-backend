@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}myGym · Find your place{% endblock %}
+{% block content %}
+<section class="neo-hero landing-hero">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-7">
+        <span class="pill-label mb-3">Gym discovery · bookings · trainers</span>
+        <h1 class="hero-title mb-4">Find the gym that fits your lifestyle.</h1>
+        <p class="hero-copy mb-4">Compare gyms by price, facilities, trainers and vibe. Book trial visits without endless searching.</p>
+        <form class="search-glass landing-search" action="{% url 'gym_list' %}" method="get">
+          <div class="search-field"><span>⌕</span><input name="q" placeholder="Gym, facility, address" autocomplete="search"></div>
+          <div class="search-field"><span>📍</span><input name="city" placeholder="City" list="landing-city-options"></div>
+          <div class="search-field"><span>€</span><input name="max_price" placeholder="Max price" inputmode="decimal"></div>
+          <button class="btn btn-primary search-btn" type="submit">Search gyms</button>
+        </form>
+        <datalist id="landing-city-options">
+          {% for option in city_options %}<option value="{{ option }}">{% endfor %}
+        </datalist>
+      </div>
+      <div class="col-lg-5">
+        <div class="hero-orbit">
+          <div class="floating-card main-stat"><span class="tiny-label">Live marketplace</span><strong>{{ results_count }}</strong><small>approved gyms to explore</small></div>
+          <div class="floating-card mini one"><strong>24/7</strong><small>Discovery</small></div>
+          <div class="floating-card mini two"><strong>★</strong><small>Reviews</small></div>
+          <div class="orange-sphere"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

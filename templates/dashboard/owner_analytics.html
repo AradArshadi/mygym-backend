@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block title %}Owner Analytics · myGym{% endblock %}
+{% block content %}
+<section class="owner-analytics-hero py-5 text-white">
+  <div class="container d-flex flex-column flex-lg-row justify-content-between gap-4 align-items-lg-end">
+    <div>
+      <p class="section-kicker text-white-50">Owner Analytics</p>
+      <h1 class="display-5 fw-black mb-2">Portfolio performance</h1>
+      <p class="lead text-white-75 mb-0">Traffic, growth, estimated income, and conversion metrics across all your gyms.</p>
+    </div>
+    <div class="analytics-range-switcher">
+      {% for option in range_options %}<a class="{% if option == days %}active{% endif %}" href="?days={{ option }}">{{ option }}d</a>{% endfor %}
+    </div>
+  </div>
+</section>
+
+<div class="container py-5 analytics-dashboard-shell">
+  <div class="analytics-stat-grid mb-4">
+    <article class="analytics-kpi-card"><span>Gyms</span><strong>{{ portfolio.totals.gyms }}</strong><small>Managed locations</small></article>
+    <article class="analytics-kpi-card accent"><span>Estimated income</span><strong>€{{ portfolio.totals.income }}</strong><small>Selected range</small></article>
+    <article class="analytics-kpi-card"><span>Active members</span><strong>{{ portfolio.totals.active_members }}</strong><small>Access passes</small></article>
+    <article class="analytics-kpi-card"><span>Check-ins</span><strong>{{ portfolio.totals.checkins }}</strong><small>QR traffic</small></article>
+    <article class="analytics-kpi-card"><span>Booking requests</span><strong>{{ portfolio.totals.bookings }}</strong><small>Lead flow</small></article>
+    <article class="analytics-kpi-card"><span>Favorites</span><strong>{{ portfolio.totals.favorites }}</strong><small>Saved gyms</small></article>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-lg-7">
+      <article class="analytics-panel h-100">
+        <div class="analytics-panel-header">
+          <div><p class="section-kicker mb-1">Traffic by gym</p><h2>Where members show up</h2></div>
+          <span>{{ days }} days</span>
+        </div>
+        <div class="analytics-ranking-list">
+          {% for item in portfolio.top_by_checkins %}
+            <a class="analytics-ranking-row" href="{% url 'owner_gym_analytics' item.gym.id %}?days={{ days }}">
+              <div><strong>{{ item.gym.name }}</strong><small>{{ item.total_checkins }} check-ins · peak {{ item.peak_label }}</small></div>
+              <div class="analytics-row-bar"><span style="width: {{ item.checkin_share }}%"></span></div>
+            </a>
+          {% empty %}<div class="owner-empty-state">No check-in data yet. QR entry validations will appear here.</div>{% endfor %}
+        </div>
+      </article>
+    </div>
+    <div class="col-lg-5">
+      <article class="analytics-panel h-100">
+        <div class="analytics-panel-header">
+          <div><p class="section-kicker mb-1">Revenue by gym</p><h2>Estimated income</h2></div>
+        </div>
+        <div class="analytics-ranking-list">
+          {% for item in portfolio.top_by_income %}
+            <a class="analytics-ranking-row" href="{% url 'owner_gym_analytics' item.gym.id %}?days={{ days }}">
+              <div><strong>{{ item.gym.name }}</strong><small>€{{ item.income.total }} · {{ item.growth.active_members }} active members</small></div>
+              <div class="analytics-row-bar income"><span style="width: {{ item.income_share }}%"></span></div>
+            </a>
+          {% empty %}<div class="owner-empty-state">No estimated income yet.</div>{% endfor %}
+        </div>
+      </article>
+    </div>
+  </div>
+
+  <div class="analytics-gym-grid">
+    {% for item in portfolio.gym_cards %}
+      <article class="analytics-gym-card">
+        <div class="analytics-card-topline">
+          <div><p class="section-kicker mb-1">Gym analytics</p><h2>{{ item.gym.name }}</h2></div>
+          <a class="btn btn-sm btn-primary rounded-pill" href="{% url 'owner_gym_analytics' item.gym.id %}?days={{ days }}">Open</a>
+        </div>
+        <div class="analytics-mini-kpis">
+          <span><strong>{{ item.total_checkins }}</strong> check-ins</span>
+          <span><strong>{{ item.growth.active_members }}</strong> members</span>
+          <span><strong>€{{ item.income.total }}</strong> income</span>
+          <span><strong>{{ item.conversion.rate }}%</strong> conversion</span>
+        </div>
+      </article>
+    {% empty %}
+      <article class="analytics-panel p-5 text-center"><h2>No gyms yet</h2><p class="owner-muted">Create a gym profile to start seeing analytics.</p><a class="btn btn-primary rounded-pill" href="{% url 'owner_gym_create' %}">Add gym</a></article>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

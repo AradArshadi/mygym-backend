@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Member access · myGym{% endblock %}
+{% block content %}
+<section class="staff-access-shell">
+  <div class="container staff-access-container">
+    <header class="staff-access-header"><div><p class="customer-eyebrow">Front desk</p><h1>Member access</h1></div><a href="{% url 'owner_dashboard' %}">Dashboard</a></header>
+    <article class="staff-member-card {% if valid %}is-valid{% else %}is-invalid{% endif %}">
+      {% if valid %}
+        <div class="staff-access-verdict"><span>✓</span><div><strong>Access ready</strong><small>Review the member before confirming entry.</small></div></div>
+      {% else %}
+        <div class="staff-access-verdict"><span>!</span><div><strong>Access denied</strong><small>{{ reason|default:'This QR code is not valid.' }}</small></div></div>
+      {% endif %}
+
+      {% if authorized %}
+        {% if mode == 'SESSION' and session %}
+          <div class="staff-profile-row"><div class="staff-avatar">{{ session.customer.get_full_name|default:session.customer.username|slice:':1'|upper }}</div><div><p>Customer</p><h2>{{ session.customer.get_full_name|default:session.customer.username }}</h2><span>{{ session.customer.email|default:'No email provided' }}</span></div></div>
+          <div class="staff-detail-grid"><div><span>Gym</span><strong>{{ session.gym.name }}</strong></div><div><span>Access type</span><strong>One-time session</strong></div><div><span>Scheduled</span><strong>{{ session.start_time|date:'d M Y · H:i' }}</strong></div><div><span>Status</span><strong>{{ session.get_status_display }}</strong></div></div>
+        {% elif mode == 'MEMBERSHIP' and subscription %}
+          <div class="staff-profile-row"><div class="staff-avatar">{{ subscription.customer.get_full_name|default:subscription.customer.username|slice:':1'|upper }}</div><div><p>Member profile</p><h2>{{ subscription.customer.get_full_name|default:subscription.customer.username }}</h2><span>{{ subscription.customer.email|default:'No email provided' }}</span></div></div>
+          <div class="staff-detail-grid"><div><span>Gym</span><strong>{{ subscription.gym.name }}</strong></div><div><span>Plan</span><strong>{{ subscription.plan.title|default:'Membership' }}</strong></div><div><span>Expiry date</span><strong>{{ subscription.end_date|date:'d M Y' }}</strong></div><div><span>Remaining</span><strong>{{ subscription.days_remaining }} days</strong></div></div>
+        {% endif %}
+
+        {% if active_visit %}<div class="staff-existing-visit">Already active at {{ active_visit.gym.name }} since {{ active_visit.checked_in_at|date:'H:i' }}.</div>{% endif %}
+      {% endif %}
+
+      <div class="staff-access-actions">
+        {% if valid %}<form method="post">{% csrf_token %}<button class="customer-btn customer-btn-dark" type="submit">Confirm check-in</button></form>{% endif %}
+        <a class="customer-btn customer-btn-quiet" href="{% url 'owner_dashboard' %}">Cancel</a>
+      </div>
+    </article>
+  </div>
+</section>
+{% endblock %}

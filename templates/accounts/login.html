@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block title %}Login · myGym{% endblock %}
+{% block content %}
+<section class="auth-shell premium-auth py-5">
+  <div class="container">
+    <div class="row align-items-center justify-content-center g-4 min-vh-75">
+      <div class="col-lg-5">
+        <div class="auth-art auth-art-dark d-none d-lg-block">
+          <span class="pill-label light">Member access</span>
+          <h1>Explore the full gym profile.</h1>
+          <p>Login to see details, plans, bookings, reviews and owner contact information.</p>
+          <div class="auth-mini-grid mt-4">
+            <span>✓ Verified discovery</span>
+            <span>✓ Booking workflow</span>
+            <span>✓ Customer dashboard</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-8 col-lg-5">
+        <div class="glass-light auth-card auth-card-premium p-4 p-md-5">
+          <p class="section-kicker">Welcome back</p>
+          <h1 class="fw-black mb-2">Login to myGym</h1>
+          <p class="text-muted mb-4">Continue to your account{% if request.GET.next %} and open the selected gym{% endif %}.</p>
+          <form method="post" class="vstack gap-3 auth-form clean-auth-form">
+            {% csrf_token %}
+            {% if form.non_field_errors %}<div class="alert alert-danger rounded-4">{{ form.non_field_errors }}</div>{% endif %}
+            {% for field in form %}
+              <div>
+                <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+              </div>
+            {% endfor %}
+            <button class="btn btn-primary rounded-pill btn-lg w-100 mt-2">Login</button>
+          </form>
+          <p class="text-muted mt-4 mb-0">New here? <a href="{% url 'register' %}{% if request.GET.next %}?next={{ request.GET.next|urlencode }}{% endif %}">Create an account</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

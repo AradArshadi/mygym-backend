@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Weekly Goal · myGym{% endblock %}
+{% block content %}
+<section class="fitness-shell py-5">
+  <div class="container fitness-narrow">
+    <div class="fitness-page-heading mb-4">
+      <p class="fitness-date">Consistency</p>
+      <h1>Weekly goal</h1>
+      <p class="fitness-muted">Fitness streaks should support recovery. Choose a realistic weekly target.</p>
+    </div>
+    <article class="fitness-card">
+      <form method="post" class="fitness-form">
+        {% csrf_token %}
+        <label for="{{ form.weekly_target.id_for_label }}">Workouts per week</label>
+        {{ form.weekly_target }}
+        {{ form.weekly_target.errors }}
+        <div class="d-flex gap-2 flex-wrap mt-4">
+          <button class="btn btn-primary rounded-pill px-4" type="submit">Save goal</button>
+          <a href="{% url 'fitness_home' %}" class="btn btn-light rounded-pill px-4">Back</a>
+        </div>
+      </form>
+    </article>
+  </div>
+</section>
+{% endblock %}

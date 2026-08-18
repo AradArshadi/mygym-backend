@@ -1,0 +1,6 @@
+{% extends 'emails/base_email.html' %}
+{% block email_content %}
+<p>Hi {{ user.username }},</p>
+<p>Welcome to myGym. Your account role is <strong>{{ role }}</strong>.</p>
+<p>You can now discover gyms, request sessions, and manage your fitness journey.</p>
+{% endblock %}

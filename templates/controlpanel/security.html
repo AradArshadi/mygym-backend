@@ -1,0 +1,74 @@
+{% extends 'controlpanel/base_control.html' %}
+{% block control_content %}
+<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+  <div>
+    <p class="section-kicker">Security & safety</p>
+    <h2 class="display-6 fw-black mb-0">Safety Center</h2>
+    <p class="text-muted fw-semibold mt-2 mb-0">Production checks, error signals, email status and access-control events.</p>
+  </div>
+  <a class="btn btn-outline-dark rounded-pill" href="{% url 'control_logs' %}">Open logs</a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3"><div class="metric-card glass-card"><span>Security checks</span><strong>{{ rows|length }}</strong><small>configuration signals</small></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="metric-card glass-card"><span>Failed emails today</span><strong>{{ failed_emails_today }}</strong><small>from SystemLog</small></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="metric-card glass-card"><span>Demo tools</span><strong>{% if demo_tools_enabled %}ON{% else %}OFF{% endif %}</strong><small>test-only actions</small></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="metric-card glass-card"><span>Recent errors</span><strong>{{ recent_errors|length }}</strong><small>last visible records</small></div></div>
+</div>
+
+<section class="glass-card p-4 mb-4">
+  <div class="d-flex justify-content-between gap-3 align-items-start mb-3">
+    <div>
+      <h3 class="h5 fw-black mb-1">Deployment safety checklist</h3>
+      <p class="text-muted fw-semibold mb-0">Run <code>python manage.py check --deploy</code> before real production.</p>
+    </div>
+  </div>
+  <div class="security-check-grid">
+    {% for row in rows %}
+      <article class="security-check-card {% if row.ok %}ok{% else %}warn{% endif %}">
+        <span class="security-status-dot"></span>
+        <div>
+          <strong>{{ row.label }}</strong>
+          <p>{{ row.value }}</p>
+          <small>{{ row.hint }}</small>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+
+<div class="row g-4">
+  <div class="col-xl-6">
+    <section class="glass-card p-4 h-100">
+      <h3 class="h5 fw-black mb-3">Recent technical errors</h3>
+      <div class="vstack gap-2">
+        {% for log in recent_errors %}
+          <div class="control-log-row">
+            <strong>{{ log.event }}</strong>
+            <span>{{ log.level }} · {{ log.category }} · {{ log.created_at|date:'d M H:i' }}</span>
+            <small>{{ log.message|truncatechars:140 }}</small>
+          </div>
+        {% empty %}
+          <div class="empty-state">No recent ERROR or CRITICAL logs.</div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+  <div class="col-xl-6">
+    <section class="glass-card p-4 h-100">
+      <h3 class="h5 fw-black mb-3">Security-relevant events</h3>
+      <div class="vstack gap-2">
+        {% for log in recent_security_events %}
+          <div class="control-log-row">
+            <strong>{{ log.event }}</strong>
+            <span>{{ log.category }} · {{ log.created_at|date:'d M H:i' }}</span>
+            <small>{{ log.message|truncatechars:140 }}</small>
+          </div>
+        {% empty %}
+          <div class="empty-state">No permission, QR or check-in events found yet.</div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

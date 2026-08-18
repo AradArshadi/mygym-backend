@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}My Dashboard · myGym{% endblock %}
+{% block content %}
+<section class="dashboard-hero py-5 text-white">
+  <div class="container d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3">
+    <div><p class="section-kicker text-white-50">Customer workspace</p><h1 class="display-5 fw-black">My Dashboard</h1><p class="lead text-white-75">Your bookings, sessions, Access Passes, saved gyms, and reviews in one place.</p></div>
+    <div class="d-flex gap-2 flex-wrap"><a class="btn btn-light rounded-pill" href="{% url 'my_sessions' %}">My Sessions</a><a class="btn btn-primary rounded-pill" href="{% url 'my_memberships' %}">My Access Passes</a></div>
+  </div>
+</section>
+<div class="container py-5">
+  <div class="row g-4 mb-4">
+    <div class="col-6 col-lg-2"><div class="stat-card"><strong>{{ stats.bookings }}</strong><span>Total bookings</span></div></div>
+    <div class="col-6 col-lg-2"><div class="stat-card"><strong>{{ stats.pending_bookings }}</strong><span>Pending</span></div></div>
+    <div class="col-6 col-lg-2"><div class="stat-card"><strong>{{ stats.upcoming_sessions }}</strong><span>Upcoming sessions</span></div></div>
+    <div class="col-6 col-lg-2"><div class="stat-card"><strong>{{ stats.active_memberships }}</strong><span>Access Passes</span></div></div>
+    <div class="col-6 col-lg-2"><div class="stat-card"><strong>{{ stats.favorites }}</strong><span>Saved gyms</span></div></div>
+    <div class="col-6 col-lg-2"><div class="stat-card"><strong>{{ stats.reviews }}</strong><span>Reviews</span></div></div>
+  </div>
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <article class="card border-0 shadow-sm rounded-5 p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h4 fw-bold mb-0">Upcoming sessions</h2><a href="{% url 'my_sessions' %}" class="btn btn-sm btn-light rounded-pill">View all</a></div>
+        {% for session in upcoming_sessions %}<div class="list-row"><div><strong>{{ session.gym.name }}</strong><p>{{ session.start_time|date:'d M Y, H:i' }} · <span class="status-pill status-{{ session.status|lower }}">{{ session.status }}</span></p></div><a class="btn btn-sm btn-primary rounded-pill" href="{% url 'session_detail' session.id %}">Open QR</a></div>{% empty %}<div class="empty-state">No upcoming sessions yet.</div>{% endfor %}
+      </article>
+
+      <article class="card border-0 shadow-sm rounded-5 p-4"><h2 class="h4 fw-bold mb-3">Recent bookings</h2>{% for booking in bookings %}<div class="list-row"><div><strong>{{ booking.gym.name }}</strong><p>{{ booking.booking_datetime|date:'d M Y, H:i' }} · <span class="status-pill status-{{ booking.status|lower }}">{{ booking.status }}</span>{% if booking.plan %} · {{ booking.plan.title }}{% endif %}</p></div><div class="row-actions"><a class="btn btn-sm btn-light rounded-pill" href="{% url 'gym_detail' booking.gym.slug %}">Open</a>{% if booking.status == 'PENDING' or booking.status == 'CONFIRMED' %}<form action="{% url 'cancel_own_booking' booking.id %}" method="post" class="d-inline">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-secondary rounded-pill">Cancel</button></form>{% endif %}</div></div>{% empty %}<div class="empty-state">No bookings yet. Time to find your next gym.</div>{% endfor %}</article>
+    </div>
+    <div class="col-lg-5">
+      <article class="card border-0 shadow-sm rounded-5 p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h4 fw-bold mb-0">Active Access Passes</h2><a href="{% url 'my_memberships' %}" class="btn btn-sm btn-light rounded-pill">Open</a></div>
+        {% for subscription in active_subscriptions %}<div class="list-row"><div><strong>{{ subscription.gym.name }}</strong><p>{{ subscription.plan.title|default:'Membership' }} · valid until {{ subscription.end_date|date:'d M Y' }}</p></div><a class="btn btn-sm btn-primary rounded-pill" href="{% url 'my_memberships' %}">Show QR</a></div>{% empty %}<div class="empty-state">No active Access Pass yet.</div>{% endfor %}
+      </article>
+      <article class="card border-0 shadow-sm rounded-5 p-4"><h2 class="h4 fw-bold mb-3">Saved gyms</h2>{% for favorite in favorites %}<div class="list-row"><div><strong>{{ favorite.gym.name }}</strong><p>{{ favorite.gym.city }} · from €{{ favorite.gym.starting_price }}</p></div><a class="btn btn-sm btn-primary rounded-pill" href="{% url 'gym_detail' favorite.gym.slug %}">View</a></div>{% empty %}<div class="empty-state">No saved gyms yet.</div>{% endfor %}</article>
+    </div>
+    <div class="col-12"><article class="card border-0 shadow-sm rounded-5 p-4"><h2 class="h4 fw-bold mb-3">Your reviews</h2>{% for review in reviews %}<div class="list-row"><div><strong>{{ review.gym.name }} · {{ review.rating }}/5</strong><p>{{ review.comment|truncatewords:20 }}</p></div></div>{% empty %}<div class="empty-state">No reviews yet.</div>{% endfor %}</article></div>
+  </div>
+</div>
+{% endblock %}

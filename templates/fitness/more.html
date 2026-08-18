@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}More · myGym{% endblock %}
+{% block content %}
+<section class="fitness-shell py-5">
+  <div class="container fitness-narrow">
+    <div class="fitness-page-heading mb-4">
+      <p class="fitness-date">More</p>
+      <h1>Settings, updates, and future tools</h1>
+      <p class="fitness-muted">We keep the main navigation simple for now. Social feed and chat are still accessible here while they mature.</p>
+    </div>
+
+    <article class="fitness-card mb-4">
+      <div class="fitness-card-label">Account</div>
+      <div class="more-menu-list">
+        <a href="{% url 'notification_list' %}" class="more-menu-item"><span>Notifications</span><small>Booking, gym, and system updates</small></a>
+        <a href="{% url 'update_workout_goal' %}" class="more-menu-item"><span>Weekly goal</span><small>Adjust your workout target</small></a>
+        <a href="{% url 'workout_history' %}" class="more-menu-item"><span>Workout history</span><small>Review your logged workouts</small></a>
+        <button type="button" class="more-menu-item more-menu-button" data-theme-toggle><span>Dark / Light mode</span><small>Change the visual theme</small></button>
+      </div>
+    </article>
+
+    <article class="fitness-card mb-4">
+      <div class="fitness-card-label">Coming next</div>
+      <div class="more-menu-list">
+        <a href="{% url 'discover' %}" class="more-menu-item"><span>Discover preview</span><small>Future posts, videos, challenges, and gym updates</small></a>
+        <a href="{% url 'chat_home' %}" class="more-menu-item"><span>Chat preview</span><small>Future messages with gyms, trainers, and friends</small></a>
+      </div>
+    </article>
+
+    <article class="fitness-card">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div>
+          <div class="fitness-card-label">Session</div>
+          <h2 class="mb-1">Need to leave?</h2>
+          <p class="fitness-muted mb-0">Logout is kept here and in the top menu so mobile users never get trapped.</p>
+        </div>
+        <form action="{% url 'logout' %}" method="post" class="m-0">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-light rounded-pill px-4">Logout</button>
+        </form>
+      </div>
+    </article>
+  </div>
+</section>
+{% endblock %}

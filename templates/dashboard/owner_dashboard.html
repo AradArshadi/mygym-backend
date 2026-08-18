@@ -1,0 +1,305 @@
+{% extends 'base.html' %}
+{% block title %}Owner Dashboard · myGym
+<script>
+(function () {
+  function updateTrafficDetail(slot) {
+    var panel = slot.closest('.owner-traffic-panel');
+    if (!panel) return;
+    var detail = panel.querySelector('[data-traffic-detail]');
+    if (!detail) return;
+
+    panel.querySelectorAll('[data-traffic-hour].is-active').forEach(function (item) {
+      item.classList.remove('is-active');
+    });
+    slot.classList.add('is-active');
+
+    var delta = Number(slot.dataset.delta || 0);
+    detail.querySelector('[data-detail-label]').textContent = slot.dataset.label || '—';
+    detail.querySelector('[data-detail-current]').textContent = slot.dataset.current || '0';
+    detail.querySelector('[data-detail-previous]').textContent = slot.dataset.previous || '0';
+    var deltaElement = detail.querySelector('[data-detail-delta]');
+    deltaElement.textContent = (delta > 0 ? '+' : '') + delta;
+    deltaElement.classList.toggle('text-success', delta > 0);
+    deltaElement.classList.toggle('text-danger', delta < 0);
+    deltaElement.classList.toggle('text-muted', delta === 0);
+    detail.hidden = false;
+  }
+
+  document.querySelectorAll('[data-traffic-hour]').forEach(function (slot) {
+    slot.addEventListener('click', function () { updateTrafficDetail(slot); });
+    slot.addEventListener('mouseenter', function () { updateTrafficDetail(slot); });
+    slot.addEventListener('focus', function () { updateTrafficDetail(slot); });
+  });
+})();
+</script>
+{% endblock %}
+{% block content %}
+<section class="dashboard-hero owner-hero py-5 text-white">
+  <div class="container d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3">
+    <div>
+      <p class="section-kicker text-white-50">Owner Workspace</p>
+      <h1 class="display-5 fw-black">Owner Dashboard</h1>
+      <p class="lead text-white-75 mb-0">Bookings, members, gym controls, and analytics in one command center.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <a class="btn btn-light btn-lg rounded-pill" href="#owner-analytics">Analytics</a>
+      <a class="btn btn-outline-light btn-lg rounded-pill" href="#owner-pending-requests">Review requests</a>
+      <a class="btn btn-primary btn-lg rounded-pill" href="{% url 'owner_gym_create' %}">+ Add Gym</a>
+    </div>
+  </div>
+</section>
+
+<div class="container py-5 owner-dashboard-shell">
+  <div class="owner-command-header mb-4">
+    <div>
+      <p class="section-kicker mb-1">Today’s command center</p>
+      <h2 class="owner-section-title mb-1">What needs your attention?</h2>
+      <p class="owner-muted mb-0">Cards jump to compact, expandable work sections so large portfolios stay easy to navigate.</p>
+    </div>
+  </div>
+
+  <div class="row g-3 g-lg-4 mb-4 owner-stat-grid">
+    <div class="col-6 col-lg-3"><a class="owner-stat-card {% if total_pending %}needs-attention{% endif %}" href="#owner-pending-requests"><span class="owner-stat-icon">⏳</span><strong>{{ total_pending }}</strong><span>Pending bookings</span><small>{% if total_pending %}Review now{% else %}All clear{% endif %}</small></a></div>
+    <div class="col-6 col-lg-3"><a class="owner-stat-card" href="#owner-confirmed-bookings"><span class="owner-stat-icon">✅</span><strong>{{ total_confirmed }}</strong><span>Confirmed bookings</span><small>Upcoming demand</small></a></div>
+    <div class="col-6 col-lg-3"><a class="owner-stat-card" href="#owner-active-members"><span class="owner-stat-icon">🎟️</span><strong>{{ active_memberships }}</strong><span>Active members</span><small>Access passes</small></a></div>
+    <div class="col-6 col-lg-3"><a class="owner-stat-card" href="#owner-recent-checkins"><span class="owner-stat-icon">📍</span><strong>{{ todays_checkins|length }}</strong><span>Today’s check-ins</span><small>Live entry activity</small></a></div>
+  </div>
+
+  <section class="owner-panel owner-analytics-merged mb-4" id="owner-analytics">
+    <div class="owner-panel-header align-items-start">
+      <div>
+        <p class="section-kicker mb-1">Business intelligence</p>
+        <h2 class="owner-section-title mb-1">Portfolio analytics</h2>
+        <p class="owner-muted mb-0">Real QR check-ins power traffic charts. Growth, income, and conversion update per gym.</p>
+      </div>
+      <div class="analytics-range-switcher compact">
+        {% for option in range_options %}<a class="{% if option == days %}active{% endif %}" href="?days={{ option }}#owner-analytics">{{ option }}d</a>{% endfor %}
+      </div>
+    </div>
+    <div class="analytics-stat-grid compact mb-4">
+      <article class="analytics-kpi-card"><span>Gyms</span><strong>{{ portfolio.totals.gyms }}</strong><small>Managed locations</small></article>
+      <article class="analytics-kpi-card accent"><span>Estimated income</span><strong>€{{ portfolio.totals.income }}</strong><small>{{ days }} days</small></article>
+      <article class="analytics-kpi-card"><span>Active members</span><strong>{{ portfolio.totals.active_members }}</strong><small>Access passes</small></article>
+      <article class="analytics-kpi-card"><span>Check-ins</span><strong>{{ portfolio.totals.checkins }}</strong><small>QR traffic</small></article>
+      <article class="analytics-kpi-card"><span>Booking requests</span><strong>{{ portfolio.totals.bookings }}</strong><small>Lead flow</small></article>
+      <article class="analytics-kpi-card"><span>Favorites</span><strong>{{ portfolio.totals.favorites }}</strong><small>Saved gyms</small></article>
+    </div>
+
+    <div class="owner-accordion-list">
+      {% for item in portfolio.gym_cards %}
+        <details class="owner-accordion-card analytics-gym-detail" id="owner-gym-analytics-{{ item.gym.id }}" {% if forloop.first %}open{% endif %}>
+          <summary>
+            <span><strong>{{ item.gym.name }}</strong><small>{{ item.total_checkins }} check-ins · €{{ item.income.total }} · {{ item.conversion.rate }}% conversion</small></span>
+            <span class="owner-summary-actions"><a href="{% url 'owner_gym_manage' item.gym.slug %}">Manage</a><a href="{% url 'owner_gym_edit' item.gym.slug %}">Edit</a></span>
+          </summary>
+          <div class="row g-4 align-items-stretch mt-1">
+            <div class="col-xl-7">
+              <article class="analytics-panel mini-chart-panel h-100 owner-traffic-panel">
+                <div class="analytics-panel-header traffic-header"><div><p class="section-kicker mb-1">Peak arrival times</p><h3>Member traffic by hour</h3><p class="owner-muted mb-0">Current {{ days }} days compared with the previous {{ days }} days.</p></div><span>{{ item.start|date:'M d' }} → {{ item.end|date:'M d' }}</span></div>
+
+                <div class="traffic-overview-row">
+                  <div class="traffic-big-number">
+                    <strong>{{ item.peak.summary.total_current }}</strong>
+                    <span>check-ins</span>
+                    <em class="traffic-change-badge traffic-{{ item.peak.summary.change_direction }}">{{ item.peak.summary.change_label }}</em>
+                  </div>
+                  <div class="traffic-legend" aria-label="Traffic chart legend">
+                    <span><i class="legend-dot current"></i>Current period</span>
+                    <span><i class="legend-dot previous"></i>Previous period</span>
+                  </div>
+                </div>
+
+                <div class="traffic-chart-shell">
+                  <div class="traffic-chart-grid" aria-label="Peak check-in hours for {{ item.gym.name }}">
+                    {% for hour in item.peak.hours %}
+                      <button
+                        type="button"
+                        class="traffic-hour-slot"
+                        data-traffic-hour
+                        data-label="{{ hour.label }}"
+                        data-current="{{ hour.count }}"
+                        data-previous="{{ hour.previous_count }}"
+                        data-delta="{{ hour.delta }}"
+                        aria-label="{{ hour.label }}: {{ hour.count }} current check-ins, {{ hour.previous_count }} previous check-ins, change {{ hour.delta }}"
+                      >
+                        <div class="traffic-bars" aria-hidden="true">
+                          <span class="traffic-bar previous" style="height: {{ hour.previous_height }}%"></span>
+                          <span class="traffic-bar current {% if hour.is_peak %}is-peak{% endif %}" style="height: {{ hour.current_height }}%"></span>
+                        </div>
+                        {% if hour.show_label %}<small>{{ hour.short_label }}</small>{% else %}<small>&nbsp;</small>{% endif %}
+                      </button>
+                    {% endfor %}
+                  </div>
+                </div>
+                <div class="traffic-interaction-hint">Swipe horizontally · tap or hover a bar for exact numbers</div>
+                <div class="traffic-point-detail" data-traffic-detail hidden aria-live="polite">
+                  <div><span>Hour</span><strong data-detail-label>—</strong></div>
+                  <div><span>Current</span><strong data-detail-current>0</strong></div>
+                  <div><span>Previous</span><strong data-detail-previous>0</strong></div>
+                  <div><span>Change</span><strong data-detail-delta>0</strong></div>
+                </div>
+
+                <div class="traffic-insight-grid">
+                  <article class="traffic-insight-card"><span>Busiest hour</span><strong>{{ item.peak.summary.busiest_hour.label|default:'—' }}</strong><small>{{ item.peak.summary.busiest_hour.count|default:0 }} check-ins</small></article>
+                  <article class="traffic-insight-card"><span>Fastest rising</span><strong>{{ item.peak.summary.fastest_rising.label|default:'—' }}</strong><small>{% if item.peak.summary.fastest_rising.delta > 0 %}+{% endif %}{{ item.peak.summary.fastest_rising.delta|default:0 }} vs previous</small></article>
+                  <article class="traffic-insight-card"><span>Largest decline</span><strong>{{ item.peak.summary.largest_decline.label|default:'—' }}</strong><small>{{ item.peak.summary.largest_decline.delta|default:0 }} vs previous</small></article>
+                </div>
+
+                <details class="traffic-table-details">
+                  <summary>View all hourly numbers</summary>
+                  <div class="table-responsive mt-3">
+                    <table class="table align-middle owner-table traffic-table mb-0">
+                      <thead><tr><th>Hour</th><th>Current</th><th>Previous</th><th>Change</th></tr></thead>
+                      <tbody>
+                        {% for hour in item.peak.hours %}
+                          <tr>
+                            <td class="fw-semibold">{{ hour.label }}</td>
+                            <td>{{ hour.count }}</td>
+                            <td>{{ hour.previous_count }}</td>
+                            <td class="{% if hour.delta > 0 %}text-success{% elif hour.delta < 0 %}text-danger{% else %}text-muted{% endif %}">{% if hour.delta > 0 %}+{% endif %}{{ hour.delta }}</td>
+                          </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              </article>
+            </div>
+            <div class="col-xl-5">
+              <article class="analytics-panel h-100">
+                <div class="analytics-panel-header"><div><p class="section-kicker mb-1">Growth & revenue</p><h3>Business pulse</h3></div></div>
+                <div class="analytics-mini-kpis stacked">
+                  <span><strong>{{ item.growth.new_members }}</strong> new subscriptions</span>
+                  <span><strong>{{ item.growth.active_members }}</strong> active members</span>
+                  <span><strong>€{{ item.income.total }}</strong> estimated income</span>
+                  <span><strong>{{ item.conversion.confirmed }}/{{ item.conversion.total }}</strong> confirmed bookings</span>
+                </div>
+                <div class="owner-dashboard-actions mt-3"><a class="btn btn-primary rounded-pill" href="{% url 'owner_gym_manage' item.gym.slug %}">Manage gym</a><a class="btn btn-outline-dark rounded-pill owner-outline-action" href="{% url 'owner_gym_edit' item.gym.slug %}">Edit info</a><a class="btn btn-outline-dark rounded-pill owner-outline-action" href="{% url 'gym_detail' item.gym.slug %}">Public page</a></div>
+              </article>
+            </div>
+          </div>
+        </details>
+      {% empty %}
+        <div class="owner-empty-state">No gyms yet. Create a gym profile to start analytics.</div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <details class="owner-panel owner-focus-panel mb-4" id="owner-pending-requests" {% if total_pending %}open{% endif %}>
+    <summary class="owner-section-summary"><span><small>Action required</small><strong>Pending booking requests</strong></span><em>{{ total_pending }} pending</em></summary>
+    <div class="owner-request-list mt-3">
+      {% for booking in pending_requests %}
+        <article class="owner-request-card">
+          <div class="owner-request-main"><div class="owner-avatar">{{ booking.customer.username|slice:':1'|upper }}</div><div><strong>{{ booking.customer.get_full_name|default:booking.customer.username }}</strong><p>{{ booking.gym.name }} · {{ booking.booking_datetime|date:'d M Y · H:i' }} · {{ booking.plan.title|default:'One-time / trial' }}</p>{% if booking.customer_note %}<small>{{ booking.customer_note }}</small>{% endif %}</div></div>
+          <div class="owner-request-actions"><form action="{% url 'update_booking_status' booking.id 'confirm' %}" method="post">{% csrf_token %}<button class="btn btn-success rounded-pill" type="submit">Accept</button></form><form action="{% url 'update_booking_status' booking.id 'reject' %}" method="post">{% csrf_token %}<button class="btn btn-outline-danger rounded-pill" type="submit">Reject</button></form></div>
+        </article>
+      {% empty %}<div class="owner-empty-state">No pending booking requests.</div>{% endfor %}
+    </div>
+  </details>
+
+  <section class="owner-panel mb-4" id="owner-active-visits">
+    <div class="owner-panel-header align-items-start">
+      <div><p class="section-kicker mb-1">Inside now</p><h2 class="owner-section-title mb-1">Active visits</h2><p class="owner-muted mb-0">Live customer sessions currently open across your gyms.</p></div>
+      <span class="owner-live-count">{{ active_visits|length }} active</span>
+    </div>
+    <div class="owner-live-visitor-list mt-3">
+      {% for visit in active_visits %}
+        <article class="owner-live-visitor">
+          <div class="owner-avatar">{{ visit.customer.get_full_name|default:visit.customer.username|slice:':1'|upper }}</div>
+          <div class="owner-live-visitor-main"><strong>{{ visit.customer.get_full_name|default:visit.customer.username }}</strong><p>{{ visit.gym.name }} · checked in {{ visit.checked_in_at|date:'H:i' }} · {{ visit.duration_minutes }} min</p><small>{% if visit.subscription and visit.subscription.plan %}{{ visit.subscription.plan.title }} · valid until {{ visit.subscription.end_date|date:'d M Y' }}{% else %}One-time session{% endif %}</small></div>
+          <form method="post" action="{% url 'checkout_visit' visit.id %}" onsubmit="return confirm('Check this customer out?');">{% csrf_token %}<button class="btn btn-sm btn-outline-dark rounded-pill owner-outline-action" type="submit">Check out</button></form>
+        </article>
+      {% empty %}<div class="owner-empty-state">No customers are currently checked in.</div>{% endfor %}
+    </div>
+  </section>
+
+  <div class="row g-4 mb-4">
+    <div class="col-lg-6">
+      <details class="owner-panel h-100" id="owner-todays-sessions">
+        <summary class="owner-section-summary"><span><small>Today</small><strong>Today’s sessions</strong></span><em>{{ todays_sessions|length }} shown</em></summary>
+        <div class="mt-3">{% for session in todays_sessions %}<div class="owner-list-row"><div><strong>{{ session.customer.get_full_name|default:session.customer.username }}</strong><p>{{ session.gym.name }} · {{ session.start_time|date:'H:i' }} · {{ session.status }}</p></div></div>{% empty %}<div class="owner-empty-state">No sessions scheduled today.</div>{% endfor %}</div>
+      </details>
+    </div>
+    <div class="col-lg-6">
+      <details class="owner-panel h-100" id="owner-recent-checkins" open>
+        <summary class="owner-section-summary"><span><small>Live traffic</small><strong>Recent check-ins</strong></span><em>{{ todays_checkins|length }} today</em></summary>
+        <div class="mt-3">{% for checkin in todays_checkins %}<div class="owner-list-row"><div><strong>{{ checkin.customer.get_full_name|default:checkin.customer.username }}</strong><p>{{ checkin.gym.name }} · {{ checkin.checked_in_at|date:'H:i' }}</p></div></div>{% empty %}<div class="owner-empty-state">No QR check-ins today.</div>{% endfor %}</div>
+      </details>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-lg-6">
+      <details class="owner-panel h-100" id="owner-confirmed-bookings">
+        <summary class="owner-section-summary"><span><small>Bookings</small><strong>Confirmed bookings</strong></span><em>{{ confirmed_bookings|length }} shown</em></summary>
+        <div class="mt-3">{% for booking in confirmed_bookings %}<div class="owner-list-row action-row"><div><strong>{{ booking.customer.get_full_name|default:booking.customer.username }}</strong><p>{{ booking.gym.name }} · {{ booking.booking_datetime|date:'d M Y · H:i' }} · {{ booking.plan.title|default:'One-time / trial' }}</p></div><form action="{% url 'update_booking_status' booking.id 'cancel' %}" method="post">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary rounded-pill" type="submit">Cancel</button></form></div>{% empty %}<div class="owner-empty-state">No confirmed bookings yet.</div>{% endfor %}</div>
+      </details>
+    </div>
+    <div class="col-lg-6">
+      <details class="owner-panel h-100" id="owner-active-members">
+        <summary class="owner-section-summary"><span><small>Members</small><strong>Active access passes</strong></span><em>{{ active_memberships }} active</em></summary>
+        <div class="mt-3">{% for membership in active_membership_list %}<div class="owner-list-row"><div><strong>{{ membership.customer.get_full_name|default:membership.customer.username }}</strong><p>{{ membership.gym.name }} · {{ membership.plan.title }} · valid until {{ membership.end_date|date:'d M Y' }}</p></div></div>{% empty %}<div class="owner-empty-state">No active access passes yet.</div>{% endfor %}</div>
+      </details>
+    </div>
+  </div>
+
+  <div class="owner-command-header mb-3"><div><p class="section-kicker mb-1">Portfolio</p><h2 class="owner-section-title mb-0">Your gyms</h2><p class="owner-muted mb-0">Each gym panel is collapsible, so owners with many gyms do not need to scroll forever.</p></div></div>
+  <div class="vstack gap-4">
+  {% for gym in gyms %}
+    <details class="owner-gym-panel" id="owner-gym-{{ gym.id }}" {% if forloop.first %}open{% endif %}>
+      <summary class="owner-gym-summary">
+        <span><strong>{{ gym.name }}</strong><small>{{ gym.city }} · {{ gym.get_status_display }} · {{ gym.total_bookings }} bookings</small></span>
+        <span class="owner-summary-actions"><a href="{% url 'owner_gym_manage' gym.slug %}">Manage</a><a href="{% url 'owner_gym_edit' gym.slug %}">Edit</a></span>
+      </summary>
+      <div class="owner-gym-body mt-3">
+        <div class="owner-mini-grid mb-4">
+          <a class="owner-mini-stat" href="#owner-gym-bookings-{{ gym.id }}"><span>Views</span><strong>{{ gym.total_views }}</strong></a>
+          <a class="owner-mini-stat" href="#owner-gym-bookings-{{ gym.id }}"><span>Bookings</span><strong>{{ gym.total_bookings }}</strong></a>
+          <a class="owner-mini-stat" href="#owner-gym-bookings-{{ gym.id }}"><span>Pending</span><strong>{{ gym.pending_bookings }}</strong></a>
+          <a class="owner-mini-stat" href="{% url 'gym_detail' gym.slug %}"><span>Favorites</span><strong>{{ gym.total_favorites }}</strong></a>
+          <a class="owner-mini-stat" href="{% url 'gym_detail' gym.slug %}"><span>Rating</span><strong>{{ gym.avg_rating|floatformat:1|default:'—' }}</strong></a>
+        </div>
+        <div class="owner-dashboard-actions mb-3"><a class="btn btn-primary rounded-pill" href="{% url 'owner_gym_manage' gym.slug %}">Manage gym</a><a class="btn btn-outline-dark rounded-pill owner-outline-action" href="{% url 'owner_gym_edit' gym.slug %}">Edit info</a><a class="btn btn-outline-dark rounded-pill owner-outline-action" href="{% url 'gym_detail' gym.slug %}">View public page</a></div>
+        <div class="owner-table-header" id="owner-gym-bookings-{{ gym.id }}"><h3>Booking history</h3><span>{{ gym.recent_bookings|length }} latest</span></div>
+        <div class="table-responsive owner-table-wrap"><table class="table align-middle owner-table"><thead><tr><th>Customer</th><th>Email</th><th>Date / Time</th><th>Plan</th><th>Status</th><th>Note</th><th>Actions</th></tr></thead><tbody>{% for booking in gym.recent_bookings %}<tr><td class="fw-semibold">{{ booking.customer.get_full_name|default:booking.customer.username }}</td><td>{{ booking.customer.email|default:'—' }}</td><td>{{ booking.booking_datetime|date:'d M Y H:i' }}</td><td>{{ booking.plan.title|default:'One-time / trial' }}</td><td><span class="status-pill status-{{ booking.status|lower }}">{{ booking.status }}</span></td><td>{{ booking.customer_note|default:'—' }}</td><td>{% if booking.status == 'PENDING' %}<form action="{% url 'update_booking_status' booking.id 'confirm' %}" method="post" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-success rounded-pill" type="submit">Accept</button></form> <form action="{% url 'update_booking_status' booking.id 'reject' %}" method="post" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger rounded-pill" type="submit">Reject</button></form>{% elif booking.status == 'CONFIRMED' %}<form action="{% url 'update_booking_status' booking.id 'cancel' %}" method="post" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary rounded-pill" type="submit">Cancel</button></form>{% else %}—{% endif %}</td></tr>{% empty %}<tr><td colspan="7" class="text-center text-muted py-4">No booking requests yet.</td></tr>{% endfor %}</tbody></table></div>
+      </div>
+    </details>
+  {% empty %}
+    <article class="owner-panel p-5 text-center"><h2>No gyms yet</h2><p class="owner-muted">Create your first gym profile and submit it for admin approval.</p><a class="btn btn-primary rounded-pill" href="{% url 'owner_gym_create' %}">Add your first gym</a></article>
+  {% endfor %}
+  </div>
+</div>
+
+<script>
+(function () {
+  function updateTrafficDetail(slot) {
+    var panel = slot.closest('.owner-traffic-panel');
+    if (!panel) return;
+    var detail = panel.querySelector('[data-traffic-detail]');
+    if (!detail) return;
+
+    panel.querySelectorAll('[data-traffic-hour].is-active').forEach(function (item) {
+      item.classList.remove('is-active');
+    });
+    slot.classList.add('is-active');
+
+    var delta = Number(slot.dataset.delta || 0);
+    detail.querySelector('[data-detail-label]').textContent = slot.dataset.label || '—';
+    detail.querySelector('[data-detail-current]').textContent = slot.dataset.current || '0';
+    detail.querySelector('[data-detail-previous]').textContent = slot.dataset.previous || '0';
+    var deltaElement = detail.querySelector('[data-detail-delta]');
+    deltaElement.textContent = (delta > 0 ? '+' : '') + delta;
+    deltaElement.classList.toggle('text-success', delta > 0);
+    deltaElement.classList.toggle('text-danger', delta < 0);
+    deltaElement.classList.toggle('text-muted', delta === 0);
+    detail.hidden = false;
+  }
+
+  document.querySelectorAll('[data-traffic-hour]').forEach(function (slot) {
+    slot.addEventListener('click', function () { updateTrafficDetail(slot); });
+    slot.addEventListener('mouseenter', function () { updateTrafficDetail(slot); });
+    slot.addEventListener('focus', function () { updateTrafficDetail(slot); });
+  });
+})();
+</script>
+{% endblock %}

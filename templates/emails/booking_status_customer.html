@@ -1,0 +1,7 @@
+{% extends 'emails/base_email.html' %}
+{% block email_content %}
+<p>Hi {{ customer.username }},</p>
+<p>Your booking request for <strong>{{ gym.name }}</strong> was <strong>{{ action_text }}</strong>.</p>
+<p>Date/time: {{ booking.booking_datetime|date:'d M Y, H:i' }}</p>
+{% if booking.plan %}<p>Plan: {{ booking.plan.title }}</p>{% endif %}
+{% endblock %}

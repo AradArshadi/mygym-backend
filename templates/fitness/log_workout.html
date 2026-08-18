@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}Log Workout · myGym{% endblock %}
+{% block content %}
+<section class="fitness-shell py-5">
+  <div class="container fitness-narrow">
+    <div class="fitness-page-heading mb-4">
+      <p class="fitness-date">Train</p>
+      <h1>Log workout</h1>
+      <p class="fitness-muted">Keep the streak alive with a simple workout entry. Advanced exercise/set tracking comes later.</p>
+    </div>
+    <article class="fitness-card">
+      <form method="post" class="fitness-form">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <div class="row g-3">
+          <div class="col-md-7">
+            <label for="{{ form.title.id_for_label }}">Title</label>
+            {{ form.title }}
+            {{ form.title.errors }}
+          </div>
+          <div class="col-md-5">
+            <label for="{{ form.workout_type.id_for_label }}">Workout type</label>
+            {{ form.workout_type }}
+            {{ form.workout_type.errors }}
+          </div>
+          <div class="col-md-5">
+            <label for="{{ form.duration_minutes.id_for_label }}">Duration minutes</label>
+            {{ form.duration_minutes }}
+            {{ form.duration_minutes.errors }}
+          </div>
+          <div class="col-md-7">
+            <label for="{{ form.logged_at.id_for_label }}">Logged at</label>
+            {{ form.logged_at }}
+            {{ form.logged_at.errors }}
+          </div>
+          <div class="col-12">
+            <label for="{{ form.notes.id_for_label }}">Notes</label>
+            {{ form.notes }}
+            {{ form.notes.errors }}
+          </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap mt-4">
+          <button class="btn btn-primary rounded-pill px-4" type="submit">Save workout</button>
+          <a href="{% url 'fitness_home' %}" class="btn btn-light rounded-pill px-4">Cancel</a>
+        </div>
+      </form>
+    </article>
+  </div>
+</section>
+{% endblock %}

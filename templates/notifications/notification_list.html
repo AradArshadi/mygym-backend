@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Notifications</h1>
+<p>{{ unread_count }} unread notification(s)</p>
+<a class="btn" href="{% url 'mark_all_notifications_read' %}">Mark all as read</a>
+
+<div class="notification-list">
+  {% for notification in notifications %}
+    <article class="notification-card {% if not notification.is_read %}unread{% endif %}">
+      <div>
+        <strong>{{ notification.title }}</strong>
+        <p>{{ notification.message }}</p>
+        <small>{{ notification.created_at|date:'d M Y H:i' }}</small>
+      </div>
+      <a href="{% url 'mark_notification_read' notification.id %}">Open</a>
+    </article>
+  {% empty %}
+    <p>No notifications yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}

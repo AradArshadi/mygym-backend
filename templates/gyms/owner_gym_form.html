@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="gym-control-hero">
+  <div class="container">
+    <div class="gym-control-hero-card edit-hero-card">
+      <div class="gym-control-identity">
+        <span class="gym-control-kicker">Owner Studio</span>
+        <h1>{{ title }}</h1>
+        <div class="gym-control-meta">
+          {% if gym %}
+            <span class="status-pill status-{{ gym.status|lower }}">{{ gym.get_status_display }}</span>
+            <span>{{ gym.city }}</span>
+            <span>Last updated {{ gym.updated_at|date:'M d, Y' }}</span>
+          {% else %}
+            <span class="status-pill status-pending">Draft profile</span>
+          {% endif %}
+        </div>
+        <p class="gym-control-subcopy">Keep this profile clear, trustworthy, and ready for marketplace approval.</p>
+      </div>
+      <div class="gym-control-actions">
+        <a class="btn btn-ghost rounded-pill" href="{% url 'owner_dashboard' %}">Owner dashboard</a>
+        {% if gym %}
+          <a class="btn btn-ghost rounded-pill" href="{% url 'owner_gym_manage' gym.slug %}">Manage gym</a>
+          {% if gym.status == 'APPROVED' %}<a class="btn btn-primary rounded-pill" href="{% url 'gym_detail' gym.slug %}">View public page</a>{% endif %}
+        {% endif %}
+      </div>
+    </div>
+
+    {% if gym %}
+      <nav class="gym-control-tabs" aria-label="Gym management sections">
+        <a href="{% url 'owner_gym_manage' gym.slug %}">Plans</a>
+        <a href="{% url 'owner_gym_edit' gym.slug %}" class="active">Edit info</a>
+        <a href="{% url 'owner_gym_manage' gym.slug %}#gym-trainers">Trainers</a>
+        <a href="{% url 'owner_gym_manage' gym.slug %}#gym-photos">Photos</a>
+        <a href="{% url 'owner_dashboard' %}#owner-gym-analytics-{{ gym.id }}">Analytics</a>
+      </nav>
+    {% endif %}
+  </div>
+</section>
+
+<section class="container gym-control-shell">
+  <form method="post" class="premium-gym-edit-form">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    <div class="edit-form-layout">
+      <main class="edit-form-main">
+        <article class="gym-control-panel management-form-card">
+          <div class="gym-control-panel-header compact">
+            <div>
+              <span class="gym-control-kicker">Identity</span>
+              <h2>Basic information</h2>
+              <p>This is what customers see first on the marketplace.</p>
+            </div>
+          </div>
+          <div class="control-field">
+            <label for="{{ form.name.id_for_label }}">Gym name</label>
+            {{ form.name }}
+            {{ form.name.errors }}
+          </div>
+          <div class="control-field">
+            <label for="{{ form.slug.id_for_label }}">Slug</label>
+            {{ form.slug }}
+            <small>{{ form.slug.help_text }}</small>
+            {{ form.slug.errors }}
+          </div>
+          <div class="control-field">
+            <label for="{{ form.description.id_for_label }}">Description</label>
+            {{ form.description }}
+            {{ form.description.errors }}
+          </div>
+        </article>
+
+        <article class="gym-control-panel management-form-card">
+          <div class="gym-control-panel-header compact">
+            <div>
+              <span class="gym-control-kicker">Location</span>
+              <h2>Address and map data</h2>
+              <p>Accurate location improves search, map view, and customer trust.</p>
+            </div>
+          </div>
+          <div class="form-split">
+            <div class="control-field">
+              <label for="{{ form.city.id_for_label }}">City</label>
+              {{ form.city }}
+              {{ form.city.errors }}
+            </div>
+            <div class="control-field">
+              <label for="{{ form.starting_price.id_for_label }}">Starting price</label>
+              {{ form.starting_price }}
+              {{ form.starting_price.errors }}
+            </div>
+          </div>
+          <div class="control-field">
+            <label for="{{ form.address.id_for_label }}">Address</label>
+            {{ form.address }}
+            {{ form.address.errors }}
+          </div>
+          <div class="form-split">
+            <div class="control-field">
+              <label for="{{ form.latitude.id_for_label }}">Latitude</label>
+              {{ form.latitude }}
+              <small>{{ form.latitude.help_text }}</small>
+              {{ form.latitude.errors }}
+            </div>
+            <div class="control-field">
+              <label for="{{ form.longitude.id_for_label }}">Longitude</label>
+              {{ form.longitude }}
+              <small>{{ form.longitude.help_text }}</small>
+              {{ form.longitude.errors }}
+            </div>
+          </div>
+        </article>
+
+        <article class="gym-control-panel management-form-card">
+          <div class="gym-control-panel-header compact">
+            <div>
+              <span class="gym-control-kicker">Contact</span>
+              <h2>Customer contact channels</h2>
+              <p>Let customers reach the gym before or after a booking.</p>
+            </div>
+          </div>
+          <div class="form-split">
+            <div class="control-field">
+              <label for="{{ form.email.id_for_label }}">Email</label>
+              {{ form.email }}
+              {{ form.email.errors }}
+            </div>
+            <div class="control-field">
+              <label for="{{ form.phone.id_for_label }}">Phone</label>
+              {{ form.phone }}
+              {{ form.phone.errors }}
+            </div>
+          </div>
+          <div class="control-field">
+            <label for="{{ form.website.id_for_label }}">Website</label>
+            {{ form.website }}
+            {{ form.website.errors }}
+          </div>
+        </article>
+
+        <article class="gym-control-panel management-form-card">
+          <div class="gym-control-panel-header compact">
+            <div>
+              <span class="gym-control-kicker">Facilities</span>
+              <h2>Amenities and tags</h2>
+              <p>Choose the facilities customers should filter and search for.</p>
+            </div>
+          </div>
+          <div class="control-checkbox-grid">
+            {{ form.facilities }}
+          </div>
+          {{ form.facilities.errors }}
+        </article>
+      </main>
+
+      <aside class="edit-form-sidebar">
+        <div class="gym-control-panel sticky-save-card">
+          <span class="gym-control-kicker">Save workflow</span>
+          <h2>Ready?</h2>
+          <p>Owner edits keep approved gyms visible. Admins can still moderate marketplace quality.</p>
+          <button class="btn btn-primary rounded-pill w-100" type="submit">Save gym profile</button>
+          {% if gym %}
+            <a class="btn btn-ghost rounded-pill w-100" href="{% url 'owner_gym_manage' gym.slug %}">Cancel</a>
+          {% else %}
+            <a class="btn btn-ghost rounded-pill w-100" href="{% url 'owner_dashboard' %}">Cancel</a>
+          {% endif %}
+        </div>
+      </aside>
+    </div>
+  </form>
+</section>
+{% endblock %}

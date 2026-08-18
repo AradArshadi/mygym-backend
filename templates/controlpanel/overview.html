@@ -1,0 +1,63 @@
+{% extends 'controlpanel/base_control.html' %}
+{% block control_content %}
+<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+  <div>
+    <p class="section-kicker">Live platform overview</p>
+    <h2 class="display-6 fw-black mb-0">Mission Control</h2>
+  </div>
+  <span class="badge rounded-pill text-bg-dark px-3 py-2">Admin-only</span>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3"><div class="metric-card glass-card"><span>Total users</span><strong>{{ metrics.total_users }}</strong><small>{{ metrics.today_signups }} today</small></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="metric-card glass-card"><span>Total gyms</span><strong>{{ metrics.total_gyms }}</strong><small>{{ metrics.pending_gyms }} pending</small></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="metric-card glass-card"><span>Bookings</span><strong>{{ metrics.total_bookings }}</strong><small>{{ metrics.pending_bookings }} pending</small></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="metric-card glass-card"><span>Views</span><strong>{{ metrics.total_views }}</strong><small>{{ metrics.today_views }} today</small></div></div>
+</div>
+
+<div class="row g-4">
+  <div class="col-xl-6">
+    <section class="glass-card p-4 h-100">
+      <h3 class="h5 fw-bold mb-3">Pending gym approvals</h3>
+      <div class="table-responsive"><table class="table align-middle"><tbody>
+      {% for gym in pending_gyms %}
+        <tr><td><strong>{{ gym.name }}</strong><br><small class="text-muted">{{ gym.city }} · {{ gym.owner.username }}</small></td><td class="text-end">
+          <form method="post" action="{% url 'control_approve_gym' gym.id %}" class="d-inline">{% csrf_token %}<input type="hidden" name="next" value="{% url 'control_overview' %}"><button class="btn btn-sm btn-primary rounded-pill">Approve</button></form>
+          <form method="post" action="{% url 'control_reject_gym' gym.id %}" class="d-inline">{% csrf_token %}<input type="hidden" name="next" value="{% url 'control_overview' %}"><button class="btn btn-sm btn-outline-dark rounded-pill">Reject</button></form>
+        </td></tr>
+      {% empty %}<tr><td class="text-muted">No pending gyms.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+  </div>
+  <div class="col-xl-6">
+    <section class="glass-card p-4 h-100">
+      <h3 class="h5 fw-bold mb-3">Recent bookings</h3>
+      <div class="table-responsive"><table class="table align-middle"><tbody>
+      {% for booking in recent_bookings %}
+        <tr><td><strong>{{ booking.customer.username }}</strong><br><small class="text-muted">{{ booking.gym.name }} · {{ booking.booking_datetime|date:'d M Y H:i' }}</small></td><td class="text-end"><span class="status-pill status-{{ booking.status|lower }}">{{ booking.status }}</span></td></tr>
+      {% empty %}<tr><td class="text-muted">No bookings yet.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+  </div>
+  <div class="col-xl-6">
+    <section class="glass-card p-4 h-100">
+      <h3 class="h5 fw-bold mb-3">Newest users</h3>
+      <div class="table-responsive"><table class="table align-middle"><tbody>
+      {% for u in recent_users %}
+        <tr><td><strong>{{ u.username }}</strong><br><small class="text-muted">{{ u.email|default:'No email' }}</small></td><td><span class="badge rounded-pill text-bg-light border">{{ u.role }}</span></td><td class="text-end"><small>{{ u.date_joined|date:'d M Y' }}</small></td></tr>
+      {% empty %}<tr><td class="text-muted">No users yet.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+  </div>
+  <div class="col-xl-6">
+    <section class="glass-card p-4 h-100">
+      <h3 class="h5 fw-bold mb-3">Top gyms by views</h3>
+      <div class="table-responsive"><table class="table align-middle"><tbody>
+      {% for gym in top_gyms %}
+        <tr><td><strong>{{ gym.name }}</strong><br><small class="text-muted">{{ gym.city }}</small></td><td>{{ gym.view_count }} views</td><td>{{ gym.booking_count }} bookings</td></tr>
+      {% empty %}<tr><td class="text-muted">No data yet.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+  </div>
+</div>
+{% endblock %}

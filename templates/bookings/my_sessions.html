@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block title %}My Sessions · myGym{% endblock %}
+{% block content %}
+<section class="dashboard-hero py-5 text-white">
+  <div class="container d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3">
+    <div>
+      <p class="section-kicker text-white-50">Digital fitness journey</p>
+      <h1 class="display-5 fw-black">My Sessions</h1>
+      <p class="lead text-white-75">Manage upcoming visits, previous check-ins, and cancelled sessions.</p>
+    </div>
+    <a class="btn btn-light rounded-pill px-4" href="{% url 'my_memberships' %}">My Access Passes</a>
+  </div>
+</section>
+
+<div class="container py-5">
+  <ul class="nav nav-pills gap-2 mb-4" id="sessionTabs" role="tablist">
+    <li class="nav-item" role="presentation"><button class="nav-link active rounded-pill" id="upcoming-tab" data-bs-toggle="pill" data-bs-target="#upcoming" type="button">Upcoming</button></li>
+    <li class="nav-item" role="presentation"><button class="nav-link rounded-pill" id="previous-tab" data-bs-toggle="pill" data-bs-target="#previous" type="button">Previous</button></li>
+    <li class="nav-item" role="presentation"><button class="nav-link rounded-pill" id="cancelled-tab" data-bs-toggle="pill" data-bs-target="#cancelled" type="button">Cancelled</button></li>
+  </ul>
+
+  <div class="tab-content">
+    <div class="tab-pane fade show active" id="upcoming">
+      <div class="vstack gap-3">
+        {% for session in upcoming_sessions %}
+          <article class="card border-0 shadow-sm rounded-5 p-4">
+            <div class="row g-4 align-items-center">
+              <div class="col-lg-7">
+                <p class="section-kicker mb-1">One-time session</p>
+                <h2 class="h4 fw-bold mb-1">{{ session.gym.name }}</h2>
+                <p class="text-muted mb-2">{{ session.start_time|date:'d M Y, H:i' }}{% if session.end_time %} – {{ session.end_time|date:'H:i' }}{% endif %}</p>
+                <span class="status-pill status-{{ session.status|lower }}">{{ session.get_status_display }}</span>
+                {% if session.booking.plan %}<span class="badge rounded-pill text-bg-light border ms-2">{{ session.booking.plan.title }}</span>{% endif %}
+              </div>
+              <div class="col-lg-3 text-center">
+                {% if session.qr_data_uri %}
+                  <img src="{{ session.qr_data_uri }}" alt="Session QR" class="img-fluid rounded-4 border p-2" style="max-width:150px;">
+                {% else %}
+                  <a href="{{ session.qr_url }}" class="small">Open QR link</a>
+                {% endif %}
+                <p class="small text-muted mb-0 mt-2">One-time QR</p>
+              </div>
+              <div class="col-lg-2 d-grid gap-2">
+                <a class="btn btn-sm btn-primary rounded-pill" href="{% url 'session_detail' session.id %}">Details</a>
+                <form method="post" action="{% url 'cancel_session' session.id %}">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary rounded-pill w-100">Cancel</button></form>
+              </div>
+            </div>
+          </article>
+        {% empty %}
+          <div class="empty-state">No upcoming sessions yet.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="previous">
+      <article class="card border-0 shadow-sm rounded-5 p-4">
+        {% for session in previous_sessions %}
+          <div class="list-row">
+            <div><strong>{{ session.gym.name }}</strong><p>{{ session.start_time|date:'d M Y, H:i' }} · <span class="status-pill status-{{ session.status|lower }}">{{ session.get_status_display }}</span></p></div>
+            <a class="btn btn-sm btn-light rounded-pill" href="{% url 'gym_detail' session.gym.slug %}">Book again</a>
+          </div>
+        {% empty %}<div class="empty-state">No previous sessions yet.</div>{% endfor %}
+      </article>
+    </div>
+
+    <div class="tab-pane fade" id="cancelled">
+      <article class="card border-0 shadow-sm rounded-5 p-4">
+        {% for session in cancelled_sessions %}
+          <div class="list-row">
+            <div><strong>{{ session.gym.name }}</strong><p>{{ session.start_time|date:'d M Y, H:i' }} · Cancelled</p></div>
+            <a class="btn btn-sm btn-light rounded-pill" href="{% url 'gym_detail' session.gym.slug %}">Open gym</a>
+          </div>
+        {% empty %}<div class="empty-state">No cancelled sessions.</div>{% endfor %}
+      </article>
+    </div>
+  </div>
+</div>
+{% endblock %}

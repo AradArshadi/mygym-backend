@@ -1,0 +1,72 @@
+{% extends 'controlpanel/base_control.html' %}
+{% block control_content %}
+<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+  <div>
+    <p class="section-kicker">Demo operations</p>
+    <h2 class="display-6 fw-black mb-0">Demo Tools</h2>
+    <p class="text-muted fw-semibold mt-2 mb-0">Seed gym and analytics demo data without shell access. Keep disabled for real production.</p>
+  </div>
+  <div class="d-flex flex-wrap gap-2 align-items-center">
+    <a class="btn btn-sm btn-outline-primary rounded-pill" href="{% url 'api_docs' %}" target="_blank">Open Swagger</a>
+    <a class="btn btn-sm btn-outline-secondary rounded-pill" href="{% url 'api_redoc' %}" target="_blank">Open ReDoc</a>
+    <span class="badge rounded-pill {% if enabled %}text-bg-warning{% else %}text-bg-secondary{% endif %} px-3 py-2">{% if enabled %}Enabled{% else %}Disabled{% endif %}</span>
+  </div>
+</div>
+
+{% if not enabled %}
+  <section class="glass-card p-4 mb-4">
+    <h3 class="h5 fw-black">Demo tools are disabled</h3>
+    <p class="text-muted fw-semibold mb-0">Set <code>DEMO_TOOLS_ENABLED=True</code> only on local/demo environments, then reload the app.</p>
+  </section>
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-xl-5 d-grid gap-4">
+    <section class="glass-card p-4">
+      <h3 class="h5 fw-black mb-2">Seed core gym demo data</h3>
+      <p class="text-muted fw-semibold">Create the built-in demo owner, customer, trainer, facilities, three approved Bamberg gyms, membership plans and trainer profile.</p>
+      <p class="small text-muted fw-semibold">This runs <code>python manage.py seed_demo</code>. Existing records are reused, so running it again does not create duplicate gyms.</p>
+      <form method="post" class="premium-control-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="seed_gym_data">
+        <button class="btn btn-primary rounded-pill" {% if not enabled %}disabled{% endif %}>Seed gym demo data</button>
+      </form>
+    </section>
+
+    <section class="glass-card p-4">
+      <h3 class="h5 fw-black mb-2">Seed analytics demo data</h3>
+      <p class="text-muted fw-semibold">Append realistic bookings, subscriptions, QR check-ins, favorites and workout logs. Optional reset removes only previous demo analytics records before reseeding smoother charts.</p>
+      <form method="post" class="premium-control-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="seed_analytics">
+        <label class="control-field">
+          <span>Owner username</span>
+          <select name="owner">
+            <option value="">All owner gyms</option>
+            {% for owner in owners %}<option value="{{ owner.username }}">{{ owner.username }}</option>{% endfor %}
+          </select>
+          <small>Limit seeding to one owner, or leave empty for all owners.</small>
+        </label>
+        <div class="form-split">
+          <label class="control-field"><span>Days back</span><input name="days" type="number" min="7" max="720" value="120"></label>
+          <label class="control-field"><span>Customers</span><input name="customers" type="number" min="5" max="300" value="25"></label>
+        </div>
+        <label class="control-checkline"><input type="checkbox" name="dry_run"><span><strong>Dry run</strong><small>Preview without writing records.</small></span></label>
+        <label class="control-checkline"><input type="checkbox" name="reset_demo"><span><strong>Reset previous demo analytics</strong><small>Deletes only generated demo traffic/workouts/favorites, then creates cleaner realistic data.</small></span></label>
+        <button class="btn btn-primary rounded-pill" {% if not enabled %}disabled{% endif %}>Run analytics seed</button>
+      </form>
+    </section>
+  </div>
+
+  <div class="col-xl-7">
+    <section class="glass-card p-4 h-100">
+      <h3 class="h5 fw-black mb-3">Command output</h3>
+      {% if output %}
+        <pre class="demo-command-output">{{ output }}</pre>
+      {% else %}
+        <div class="empty-state">Run a demo command to see output here.</div>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}

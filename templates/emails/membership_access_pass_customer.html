@@ -1,0 +1,13 @@
+{% extends 'emails/base_email.html' %}
+{% block email_content %}
+<p>Hi {{ customer.username }},</p>
+<p>Your myGym Access Pass for <strong>{{ gym.name }}</strong> is active.</p>
+<ul>
+  {% if subscription.plan %}<li>Plan: {{ subscription.plan.title }}</li>{% endif %}
+  <li>Valid from: {{ subscription.start_date|date:'d M Y' }}</li>
+  <li>Valid until: {{ subscription.end_date|date:'d M Y' }}</li>
+</ul>
+<p>This membership QR refreshes every 24 hours when you open your account.</p>
+{% if qr_data_uri %}<p><img src="{{ qr_data_uri }}" alt="Membership Access Pass QR" style="width:180px;height:180px;"></p>{% endif %}
+<p><a href="{{ qr_url }}">Open Access Pass QR link</a></p>
+{% endblock %}

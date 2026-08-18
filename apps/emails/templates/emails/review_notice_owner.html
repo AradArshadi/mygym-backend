@@ -1,0 +1,7 @@
+{% extends "emails/base_email.html" %}
+{% block content %}
+<h1 style="margin:0 0 12px;font-size:26px;">New review received</h1>
+<p style="font-size:16px;line-height:1.7;color:#555;"><strong>{{ customer.username }}</strong> reviewed <strong>{{ gym.name }}</strong>.</p>
+<p style="font-size:18px;font-weight:800;color:#ff5a1f;">{{ review.rating }}/5 ★</p>
+<p style="font-size:15px;line-height:1.7;color:#555;">{{ review.comment }}</p>
+{% endblock %}

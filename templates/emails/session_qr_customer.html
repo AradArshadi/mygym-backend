@@ -1,0 +1,12 @@
+{% extends 'emails/base_email.html' %}
+{% block email_content %}
+<p>Hi {{ customer.username }},</p>
+<p>Your session at <strong>{{ gym.name }}</strong> is confirmed.</p>
+<ul>
+  <li>Date/time: {{ session.start_time|date:'d M Y, H:i' }}</li>
+  <li>Address: {{ gym.address }}</li>
+</ul>
+<p>Show this one-time QR code when you arrive. It can only be used once.</p>
+{% if qr_data_uri %}<p><img src="{{ qr_data_uri }}" alt="Session QR" style="width:180px;height:180px;"></p>{% endif %}
+<p><a href="{{ qr_url }}">Open check-in QR link</a></p>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Join · myGym{% endblock %}
+{% block content %}
+<section class="auth-shell premium-auth py-5">
+  <div class="container">
+    <div class="row align-items-center justify-content-center g-4 min-vh-75">
+      <div class="col-lg-5">
+        <div class="auth-art auth-art-dark d-none d-lg-block">
+          <span class="pill-label light">Join myGym</span>
+          <h1>Your fitness marketplace account.</h1>
+          <p>Create a customer account to explore gyms, or an owner account to submit listings for approval.</p>
+          <div class="auth-mini-grid mt-4">
+            <span>✓ No public admin signup</span>
+            <span>✓ Owner approval flow</span>
+            <span>✓ Secure role control</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-9 col-lg-6">
+        <div class="glass-light auth-card auth-card-premium p-4 p-md-5">
+          <p class="section-kicker">Start free</p>
+          <h1 class="fw-black mb-2">Create account</h1>
+          <p class="text-muted mb-4">Admins are created only from the Control Deck by a trusted admin.</p>
+          <form method="post" class="vstack gap-3 auth-form clean-auth-form">
+            {% csrf_token %}
+            {% if form.non_field_errors %}<div class="alert alert-danger rounded-4">{{ form.non_field_errors }}</div>{% endif %}
+            {% for field in form %}
+              <div>
+                <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+              </div>
+            {% endfor %}
+            <button class="btn btn-primary rounded-pill btn-lg w-100 mt-2">Create account</button>
+          </form>
+          <p class="text-muted mt-4 mb-0">Already have an account? <a href="{% url 'login' %}{% if request.GET.next %}?next={{ request.GET.next|urlencode }}{% endif %}">Login</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

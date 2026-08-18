@@ -1,0 +1,248 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="gym-control-hero">
+  <div class="container">
+    <div class="gym-control-hero-card">
+      <div class="gym-control-identity">
+        <span class="gym-control-kicker">Gym Control Center</span>
+        <h1>{{ gym.name }}</h1>
+        <div class="gym-control-meta">
+          <span class="status-pill status-{{ gym.status|lower }}">{{ gym.get_status_display }}</span>
+          <span>{{ gym.city }}</span>
+          <span>{{ gym.plans.count }} plan{{ gym.plans.count|pluralize }}</span>
+          <span>{{ gym.trainers.count }} trainer{{ gym.trainers.count|pluralize }}</span>
+        </div>
+      </div>
+      <div class="gym-control-actions">
+        <a class="btn btn-ghost rounded-pill" href="{% url 'owner_dashboard' %}">Owner dashboard</a>
+        {% if gym.status == 'APPROVED' %}<a class="btn btn-ghost rounded-pill" href="{% url 'gym_detail' gym.slug %}">View public page</a>{% endif %}
+        <a class="btn btn-primary rounded-pill" href="{% url 'owner_gym_edit' gym.slug %}">Edit info</a>
+      </div>
+    </div>
+
+    <nav class="gym-control-tabs" aria-label="Gym management sections">
+      <a href="{% url 'owner_gym_manage' gym.slug %}" class="active">Plans</a>
+      <a href="{% url 'owner_gym_edit' gym.slug %}">Edit info</a>
+      <a href="#gym-trainers">Trainers</a>
+      <a href="#gym-photos">Photos</a>
+      <a href="{% url 'owner_dashboard' %}#owner-gym-analytics-{{ gym.id }}">Analytics</a>
+    </nav>
+  </div>
+</section>
+
+<section class="container gym-control-shell">
+  <div class="gym-control-grid">
+    <article class="gym-control-panel primary-panel" id="gym-plans">
+      <div class="gym-control-panel-header">
+        <div>
+          <span class="gym-control-kicker">Revenue foundation</span>
+          <h2>Membership plans</h2>
+          <p>Build the products customers can book and subscribe to.</p>
+        </div>
+        <span class="gym-control-count">{{ gym.plans.count }} active</span>
+      </div>
+
+      <div class="plan-card-grid">
+        {% for plan in gym.plans.all %}
+          <article class="plan-control-card {% if plan.is_trial %}trial-plan{% endif %}">
+            <div class="plan-card-topline">
+              <div>
+                <h3>{{ plan.title }}</h3>
+                <p>{{ plan.description|default:'No description yet.' }}</p>
+              </div>
+              <span class="plan-badge">{% if plan.is_trial %}Trial{% else %}Standard{% endif %}</span>
+            </div>
+            <div class="plan-metrics">
+              <span><strong>€{{ plan.price }}</strong><small>Price</small></span>
+              <span><strong>{{ plan.duration_days }}</strong><small>Days</small></span>
+              <span><strong>{% if plan.is_trial %}Yes{% else %}No{% endif %}</strong><small>Trial</small></span>
+            </div>
+            <form method="post" action="{% url 'owner_plan_delete' gym.slug plan.id %}" class="plan-danger-form">
+              {% csrf_token %}
+              <button class="btn btn-sm btn-outline-danger rounded-pill" type="submit">Delete plan</button>
+            </form>
+          </article>
+        {% empty %}
+          <div class="gym-control-empty">
+            <strong>No plans yet.</strong>
+            <span>Create your first plan so customers know what they can book.</span>
+          </div>
+        {% endfor %}
+      </div>
+    </article>
+
+    <aside class="gym-control-panel add-panel">
+      <div class="gym-control-panel-header compact">
+        <div>
+          <span class="gym-control-kicker">Create</span>
+          <h2>New plan</h2>
+          <p>Add a day pass, monthly access, trial, or future premium product.</p>
+        </div>
+      </div>
+      <form method="post" action="{% url 'owner_plan_add' gym.slug %}" class="premium-control-form">
+        {% csrf_token %}
+        <div class="control-field">
+          <label for="{{ plan_form.title.id_for_label }}">Title</label>
+          {{ plan_form.title }}
+          {{ plan_form.title.errors }}
+        </div>
+        <div class="control-field">
+          <label for="{{ plan_form.description.id_for_label }}">Description</label>
+          {{ plan_form.description }}
+          {{ plan_form.description.errors }}
+        </div>
+        <div class="form-split">
+          <div class="control-field">
+            <label for="{{ plan_form.price.id_for_label }}">Price</label>
+            {{ plan_form.price }}
+            {{ plan_form.price.errors }}
+          </div>
+          <div class="control-field">
+            <label for="{{ plan_form.duration_days.id_for_label }}">Duration</label>
+            {{ plan_form.duration_days }}
+            {{ plan_form.duration_days.errors }}
+          </div>
+        </div>
+        <label class="control-checkline" for="{{ plan_form.is_trial.id_for_label }}">
+          {{ plan_form.is_trial }}
+          <span>
+            <strong>Trial plan</strong>
+            <small>Useful for first visits, open days, and intro offers.</small>
+          </span>
+        </label>
+        <button class="btn btn-primary rounded-pill w-100" type="submit">Add membership plan</button>
+      </form>
+    </aside>
+  </div>
+
+  <div class="gym-control-grid secondary-grid" id="gym-trainers">
+    <article class="gym-control-panel">
+      <div class="gym-control-panel-header">
+        <div>
+          <span class="gym-control-kicker">Team</span>
+          <h2>Trainers</h2>
+          <p>Attach trainer accounts to this gym and keep availability clear.</p>
+        </div>
+        <span class="gym-control-count">{{ gym.trainers.count }} trainer{{ gym.trainers.count|pluralize }}</span>
+      </div>
+
+      <div class="trainer-card-list">
+        {% for trainer in gym.trainers.all %}
+          <article class="trainer-control-card">
+            <div class="owner-avatar">{{ trainer.user.username|slice:':1'|upper }}</div>
+            <div class="trainer-card-main">
+              <h3>{{ trainer.user.get_full_name|default:trainer.user.username }}</h3>
+              <p>{{ trainer.specialties|default:'No specialties added.' }}</p>
+              <small>{% if trainer.hourly_rate %}€{{ trainer.hourly_rate }}/hour{% else %}No hourly rate{% endif %} · {{ trainer.is_available|yesno:'Available,Unavailable' }}</small>
+            </div>
+            <form method="post" action="{% url 'owner_trainer_delete' gym.slug trainer.id %}">
+              {% csrf_token %}
+              <button class="btn btn-sm btn-outline-danger rounded-pill" type="submit">Remove</button>
+            </form>
+          </article>
+        {% empty %}
+          <div class="gym-control-empty compact-empty">
+            <strong>No trainers attached.</strong>
+            <span>Create trainer users first, then attach them here.</span>
+          </div>
+        {% endfor %}
+      </div>
+    </article>
+
+    <aside class="gym-control-panel add-panel">
+      <div class="gym-control-panel-header compact">
+        <div>
+          <span class="gym-control-kicker">Assign</span>
+          <h2>Add trainer</h2>
+        </div>
+      </div>
+      <form method="post" action="{% url 'owner_trainer_add' gym.slug %}" class="premium-control-form">
+        {% csrf_token %}
+        <div class="control-field">
+          <label for="{{ trainer_form.user.id_for_label }}">Trainer user</label>
+          {{ trainer_form.user }}
+          <small>{{ trainer_form.user.help_text }}</small>
+          {{ trainer_form.user.errors }}
+        </div>
+        <div class="control-field">
+          <label for="{{ trainer_form.bio.id_for_label }}">Bio</label>
+          {{ trainer_form.bio }}
+          {{ trainer_form.bio.errors }}
+        </div>
+        <div class="control-field">
+          <label for="{{ trainer_form.specialties.id_for_label }}">Specialties</label>
+          {{ trainer_form.specialties }}
+          {{ trainer_form.specialties.errors }}
+        </div>
+        <div class="form-split">
+          <div class="control-field">
+            <label for="{{ trainer_form.hourly_rate.id_for_label }}">Hourly rate</label>
+            {{ trainer_form.hourly_rate }}
+            {{ trainer_form.hourly_rate.errors }}
+          </div>
+          <label class="control-checkline compact-check" for="{{ trainer_form.is_available.id_for_label }}">
+            {{ trainer_form.is_available }}
+            <span><strong>Available</strong><small>Visible for booking.</small></span>
+          </label>
+        </div>
+        <button class="btn btn-primary rounded-pill w-100" type="submit">Attach trainer</button>
+      </form>
+    </aside>
+  </div>
+
+  <article class="gym-control-panel photos-panel" id="gym-photos">
+    <div class="gym-control-panel-header">
+      <div>
+        <span class="gym-control-kicker">Marketplace trust</span>
+        <h2>Photos</h2>
+        <p>Strong photos make a gym profile feel real and bookable.</p>
+      </div>
+      <span class="gym-control-count">{{ gym.images.count }} photo{{ gym.images.count|pluralize }}</span>
+    </div>
+
+    <div class="control-photo-grid">
+      {% for image in gym.images.all %}
+        <article class="control-photo-card">
+          {% if image.image_url %}
+            <img src="{{ image.image_url }}" alt="{{ image.alt_text|default:gym.name }}">
+          {% else %}
+            <div class="photo-placeholder">No image</div>
+          {% endif %}
+          <div class="control-photo-meta">
+            <strong>{{ image.alt_text|default:'Gym photo' }}</strong>
+            {% if image.is_cover %}<span>Cover</span>{% endif %}
+          </div>
+          <form method="post" action="{% url 'owner_image_delete' gym.slug image.id %}">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-outline-danger rounded-pill w-100" type="submit">Delete photo</button>
+          </form>
+        </article>
+      {% empty %}
+        <div class="gym-control-empty">
+          <strong>No photos uploaded yet.</strong>
+          <span>Upload a cover image first, then add more gallery photos later.</span>
+        </div>
+      {% endfor %}
+    </div>
+
+    <form method="post" enctype="multipart/form-data" action="{% url 'owner_image_add' gym.slug %}" class="premium-control-form upload-control-form">
+      {% csrf_token %}
+      <div class="control-field">
+        <label for="{{ image_form.image.id_for_label }}">Upload image</label>
+        {{ image_form.image }}
+        {{ image_form.image.errors }}
+      </div>
+      <div class="control-field">
+        <label for="{{ image_form.alt_text.id_for_label }}">Alt text</label>
+        {{ image_form.alt_text }}
+        {{ image_form.alt_text.errors }}
+      </div>
+      <label class="control-checkline compact-check" for="{{ image_form.is_cover.id_for_label }}">
+        {{ image_form.is_cover }}
+        <span><strong>Use as cover</strong><small>Shown first on cards and detail pages.</small></span>
+      </label>
+      <button class="btn btn-primary rounded-pill" type="submit">Upload photo</button>
+    </form>
+  </article>
+</section>
+{% endblock %}

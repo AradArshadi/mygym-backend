@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Discover · myGym{% endblock %}
+{% block content %}
+<section class="fitness-shell py-5">
+  <div class="container">
+    <div class="fitness-page-heading mb-4">
+      <p class="fitness-date">Discover</p>
+      <h1>Social fitness layer</h1>
+      <p class="fitness-muted">This is the future feed space for posts, videos, gym announcements, challenges, and friend activity. v0.9.3 prepares the UX shell without overbuilding the social backend too early.</p>
+    </div>
+    <div class="row g-4 mb-4">
+      {% for post in sample_posts %}
+        <div class="col-md-4">
+          <article class="fitness-card h-100">
+            <span class="fitness-chip mb-3">{{ post.tag }}</span>
+            <h2 class="h4">{{ post.title }}</h2>
+            <p class="fitness-muted">{{ post.body }}</p>
+            <p class="mb-0 small fitness-muted">by {{ post.actor }}</p>
+          </article>
+        </div>
+      {% endfor %}
+    </div>
+    <article class="fitness-card">
+      <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
+        <div><div class="fitness-card-label">Explore now</div><h2 class="mb-0">Approved gyms</h2></div>
+        <a href="{% url 'gym_list' %}" class="fitness-link">Open full marketplace</a>
+      </div>
+      <div class="row g-3">
+        {% for gym in gyms %}
+          <div class="col-md-6 col-lg-4">
+            <a class="fitness-mini-gym" href="{% url 'gym_detail' gym.slug %}">
+              <strong>{{ gym.name }}</strong>
+              <span>{{ gym.city }} · from €{{ gym.starting_price }}</span>
+            </a>
+          </div>
+        {% empty %}
+          <div class="col-12"><div class="fitness-empty">No gyms to discover yet.</div></div>
+        {% endfor %}
+      </div>
+    </article>
+  </div>
+</section>
+{% endblock %}

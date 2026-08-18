@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+{% block title %}Home · myGym{% endblock %}
+{% block content %}
+<section class="customer-app-shell">
+  <div class="container customer-home-container">
+    <header class="customer-home-header">
+      <div>
+        <p class="customer-eyebrow">{% now 'l, d F' %}</p>
+        <h1>Welcome{% if user.first_name %}, {{ user.first_name }}{% else %}, {{ user.username }}{% endif %}</h1>
+      </div>
+      <a class="customer-icon-link" href="{% url 'notification_list' %}" aria-label="Notifications">
+        <span aria-hidden="true">●</span>
+      </a>
+    </header>
+
+    {% if active_visit %}
+      <article class="customer-primary-card active-visit-card">
+        <div class="customer-card-topline">
+          <span class="customer-status-dot"></span>
+          <span>Active visit</span>
+          <span class="customer-live-label">Live</span>
+        </div>
+        <div class="customer-primary-grid">
+          <div>
+            <p class="customer-card-caption">Currently training at</p>
+            <h2>{{ active_visit.gym.name }}</h2>
+            <p class="customer-card-meta">Checked in {{ active_visit.checked_in_at|date:'H:i' }} · {{ active_visit.duration_minutes }} min so far</p>
+          </div>
+          <div class="visit-live-clock" data-visit-start="{{ active_visit.checked_in_at|date:'c' }}">
+            <strong data-visit-timer>{{ active_visit.duration_minutes }}m</strong>
+            <span>duration</span>
+          </div>
+        </div>
+        <div class="customer-primary-actions">
+          <a class="customer-btn customer-btn-light" href="{% url 'log_workout' %}">Log workout</a>
+          <form method="post" action="{% url 'checkout_visit' active_visit.id %}" onsubmit="return confirm('Finish this gym visit?');">
+            {% csrf_token %}
+            <button class="customer-btn customer-btn-outline-light" type="submit">Check out</button>
+          </form>
+        </div>
+      </article>
+    {% elif active_subscription %}
+      <article class="customer-primary-card membership-card">
+        <div class="customer-card-topline">
+          <span class="customer-status-dot"></span>
+          <span>Active membership</span>
+          {% if active_subscription.days_remaining <= 7 %}<span class="customer-warning-label">Ends soon</span>{% endif %}
+        </div>
+        <div class="customer-primary-grid">
+          <div>
+            <p class="customer-card-caption">{{ active_subscription.plan.title|default:'Membership' }}</p>
+            <h2>{{ active_subscription.gym.name }}</h2>
+            <p class="customer-card-meta">Valid until {{ active_subscription.end_date|date:'d F Y' }}</p>
+          </div>
+          <div class="days-remaining-block {% if active_subscription.days_remaining <= 7 %}is-warning{% endif %}">
+            <strong>{{ active_subscription.days_remaining }}</strong>
+            <span>days left</span>
+          </div>
+        </div>
+        <div class="customer-primary-actions">
+          <a class="customer-btn customer-btn-light" href="{% url 'my_memberships' %}">Open visit pass</a>
+          {% if active_subscription.days_remaining <= 7 %}
+            <a class="customer-btn customer-btn-outline-light" href="{% url 'gym_detail' active_subscription.gym.slug %}">View plans</a>
+          {% endif %}
+        </div>
+      </article>
+    {% else %}
+      <article class="customer-primary-card customer-empty-membership">
+        <div>
+          <p class="customer-card-caption">Your membership</p>
+          <h2>Find a gym that fits your routine.</h2>
+          <p class="customer-card-meta">Compare gyms, request a plan, and keep your access in one place.</p>
+        </div>
+        <a class="customer-btn customer-btn-light" href="{% url 'gym_list' %}">Explore gyms</a>
+      </article>
+    {% endif %}
+
+    <div class="customer-home-grid">
+      <section class="customer-section-card customer-up-next">
+        <div class="customer-section-heading">
+          <div><span>Up next</span><h2>Your schedule</h2></div>
+          <a href="{% url 'my_sessions' %}">View all</a>
+        </div>
+        {% if upcoming_session %}
+          <div class="customer-list-item">
+            <div class="customer-list-date"><strong>{{ upcoming_session.start_time|date:'d' }}</strong><span>{{ upcoming_session.start_time|date:'M' }}</span></div>
+            <div class="customer-list-content"><strong>{{ upcoming_session.gym.name }}</strong><span>{{ upcoming_session.start_time|date:'H:i' }}{% if upcoming_session.booking.plan %} · {{ upcoming_session.booking.plan.title }}{% endif %}</span></div>
+            <a class="customer-row-action" href="{% url 'session_detail' upcoming_session.id %}">Open</a>
+          </div>
+        {% else %}
+          <div class="customer-quiet-empty"><strong>No upcoming visit</strong><span>Explore gyms whenever you are ready.</span></div>
+        {% endif %}
+      </section>
+
+      <section class="customer-section-card customer-progress-card">
+        <div class="customer-section-heading">
+          <div><span>This week</span><h2>{{ summary.week_count }} of {{ summary.goal.weekly_target }} workouts</h2></div>
+          <a href="{% url 'workout_history' %}">Activity</a>
+        </div>
+        <div class="customer-progress-track"><span style="width: {{ summary.progress_percent }}%"></span></div>
+        <div class="customer-progress-meta"><span>{{ summary.progress_percent }}% complete</span><span>{{ summary.streak }} week streak</span></div>
+      </section>
+    </div>
+
+    <section class="customer-section-card customer-activity-calendar-section">
+      <div class="customer-section-heading customer-activity-heading">
+        <div>
+          <span>Training activity</span>
+          <h2>{{ summary.activity_range_workouts }} workout{{ summary.activity_range_workouts|pluralize }}</h2>
+          <p class="customer-section-subtitle">Past {{ summary.activity_days }} days</p>
+        </div>
+        <div class="activity-range-switch" aria-label="Activity range">
+          {% for option in summary.activity_range_options %}
+            <a href="?activity_days={{ option }}" class="{% if summary.activity_days == option %}active{% endif %}">{{ option }}d</a>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="gh-activity-scroll" aria-label="Workout activity calendar for the past {{ summary.activity_days }} days">
+        <div class="gh-activity-calendar" style="--weeks: {{ summary.activity_calendar.total_weeks }};">
+          <div class="gh-month-row" aria-hidden="true">
+            {% for month in summary.activity_calendar.month_labels %}
+              <span style="grid-column: {{ month.column }};">{{ month.label }}</span>
+            {% endfor %}
+          </div>
+          <div class="gh-weekday-row" aria-hidden="true">
+            <span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span><span></span>
+          </div>
+          <div class="gh-activity-grid" data-activity-map>
+            {% for day in summary.activity_calendar.cells %}
+              <button type="button"
+                      class="gh-activity-cell level-{{ day.intensity }}{% if day.is_today %} today{% endif %}{% if day.is_muted %} muted{% endif %}"
+                      title="{{ day.date|date:'M d, Y' }} · {{ day.count }} workout{{ day.count|pluralize }}"
+                      aria-label="{{ day.date|date:'M d, Y' }}: {{ day.count }} workout{{ day.count|pluralize }}"
+                      data-date="{{ day.date|date:'M d, Y' }}"
+                      data-count="{{ day.count }}"
+                      data-weekday="{{ day.weekday }}"></button>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="gh-activity-detail" data-activity-detail aria-live="polite">
+        Tap a day to see workout count.
+      </div>
+      <div class="customer-activity-footer">
+        <span>{{ summary.activity_calendar.requested_start|date:'M d' }} → Today</span>
+        <span class="gh-activity-legend"><span>Less</span><i class="level-0"></i><i class="level-1"></i><i class="level-2"></i><i class="level-3"></i><i class="level-4"></i><span>More</span></span>
+        <span>{{ summary.activity_range_active_days }} active day{{ summary.activity_range_active_days|pluralize }} in range</span>
+      </div>
+    </section>
+
+    <section class="customer-section-card customer-recent-section">
+      <div class="customer-section-heading">
+        <div><span>Recent activity</span><h2>Latest workouts</h2></div>
+        <a href="{% url 'log_workout' %}">Add workout</a>
+      </div>
+      {% for workout in recent_workouts %}
+        <div class="customer-list-item customer-workout-row">
+          <div class="customer-list-icon">↗</div>
+          <div class="customer-list-content"><strong>{{ workout.title }}</strong><span>{{ workout.logged_at|date:'d M · H:i' }} · {{ workout.duration_minutes }} min</span></div>
+        </div>
+      {% empty %}
+        <div class="customer-quiet-empty"><strong>No workouts logged yet</strong><span>Your first activity will appear here.</span></div>
+      {% endfor %}
+    </section>
+  </div>
+</section>
+<script>
+(function () {
+  var map = document.querySelector('[data-activity-map]');
+  var detail = document.querySelector('[data-activity-detail]');
+  if (!map || !detail) return;
+
+  function showDay(cell) {
+    var count = Number(cell.dataset.count || 0);
+    var date = cell.dataset.date || 'Selected day';
+    var weekday = cell.dataset.weekday || '';
+    var word = count === 1 ? 'workout' : 'workouts';
+    detail.innerHTML = '<strong>' + date + '</strong>' +
+      (weekday ? ' · ' + weekday : '') +
+      '<span>' + count + ' ' + word + ' logged</span>';
+    map.querySelectorAll('.gh-activity-cell.selected').forEach(function (item) {
+      item.classList.remove('selected');
+    });
+    cell.classList.add('selected');
+  }
+
+  map.addEventListener('click', function (event) {
+    var cell = event.target.closest('.gh-activity-cell');
+    if (cell) showDay(cell);
+  });
+})();
+</script>
+{% if active_visit %}
+<script>
+(function () {
+  var clock = document.querySelector('[data-visit-start]');
+  var output = document.querySelector('[data-visit-timer]');
+  if (!clock || !output) return;
+  var start = new Date(clock.dataset.visitStart).getTime();
+  function update() {
+    var seconds = Math.max(0, Math.floor((Date.now() - start) / 1000));
+    var hours = Math.floor(seconds / 3600);
+    var minutes = Math.floor((seconds % 3600) / 60);
+    output.textContent = hours ? hours + 'h ' + minutes + 'm' : minutes + 'm';
+  }
+  update();
+  window.setInterval(update, 30000);
+})();
+</script>
+{% endif %}
+{% endblock %}

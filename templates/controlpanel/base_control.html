@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Control Deck · myGym{% endblock %}
+{% block content %}
+<section class="control-shell py-5">
+  <div class="container-fluid px-3 px-lg-5">
+    <div class="row g-4">
+      <aside class="col-lg-3 col-xl-2">
+        <div class="control-sidebar glass-card p-4 sticky-lg-top">
+          <p class="section-kicker mb-2">Platform Ops</p>
+          <h1 class="h4 fw-black mb-4">Control Deck</h1>
+          <nav class="vstack gap-2">
+            <a class="control-nav-link {% if request.resolver_match.url_name == 'control_overview' %}active{% endif %}" href="{% url 'control_overview' %}">Overview</a>
+            <a class="control-nav-link {% if request.resolver_match.url_name == 'control_users' %}active{% endif %}" href="{% url 'control_users' %}">Users</a>
+            <a class="control-nav-link {% if request.resolver_match.url_name == 'control_gyms' %}active{% endif %}" href="{% url 'control_gyms' %}">Gyms</a>
+            <a class="control-nav-link {% if request.resolver_match.url_name == 'control_bookings' %}active{% endif %}" href="{% url 'control_bookings' %}">Bookings</a>
+            <a class="control-nav-link {% if request.resolver_match.url_name == 'control_reviews' %}active{% endif %}" href="{% url 'control_reviews' %}">Reviews</a>
+            <a class="control-nav-link {% if request.resolver_match.url_name == 'control_logs' %}active{% endif %}" href="{% url 'control_logs' %}">System Logs</a>
+            <a class="control-nav-link {% if request.resolver_match.url_name == 'control_security' %}active{% endif %}" href="{% url 'control_security' %}">Safety Center</a>
+            <a class="control-nav-link {% if request.resolver_match.url_name == 'control_demo_tools' %}active{% endif %}" href="{% url 'control_demo_tools' %}">Demo Tools</a>
+            <a class="control-nav-link" href="{% url 'api_docs' %}" target="_blank">Swagger API</a>
+            <a class="control-nav-link" href="{% url 'api_redoc' %}" target="_blank">API Docs</a>
+            <a class="control-nav-link" href="{% url 'admin:index' %}" target="_blank">Django Admin</a>
+          </nav>
+        </div>
+      </aside>
+      <main class="col-lg-9 col-xl-10">
+        {% block control_content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+</section>
+{% endblock %}

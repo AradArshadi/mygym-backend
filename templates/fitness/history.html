@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Workout History · myGym{% endblock %}
+{% block content %}
+<section class="fitness-shell py-5">
+  <div class="container">
+    <div class="fitness-page-heading mb-4">
+      <p class="fitness-date">History</p>
+      <h1>Workout history</h1>
+      <p class="fitness-muted">{{ summary.total_workouts }} total workouts · {{ summary.total_minutes }} minutes logged · {{ summary.streak }} week streak</p>
+    </div>
+    <div class="row g-4">
+      <div class="col-lg-4">
+        <article class="fitness-card">
+          <div class="fitness-card-label">This week</div>
+          <h2>{{ summary.week_count }}/{{ summary.goal.weekly_target }}</h2>
+          <div class="fitness-progress-track mt-3"><span style="width: {{ summary.progress_percent }}%"></span></div>
+          <a href="{% url 'update_workout_goal' %}" class="fitness-link d-inline-block mt-3">Edit weekly goal</a>
+        </article>
+      </div>
+      <div class="col-lg-8">
+        <article class="fitness-card">
+          {% for workout in workouts %}
+            <div class="fitness-list-row">
+              <div>
+                <strong>{{ workout.title }}</strong>
+                <p>{{ workout.logged_at|date:'D, d M Y · H:i' }} · {{ workout.duration_minutes }} min{% if workout.workout_type %} · {{ workout.workout_type }}{% endif %}</p>
+                {% if workout.notes %}<p class="fitness-muted mb-0">{{ workout.notes|truncatewords:22 }}</p>{% endif %}
+              </div>
+            </div>
+          {% empty %}
+            <div class="fitness-empty">No workout history yet.</div>
+          {% endfor %}
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

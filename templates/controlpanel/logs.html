@@ -1,0 +1,63 @@
+{% extends 'controlpanel/base_control.html' %}
+{% block control_content %}
+<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+  <div>
+    <p class="section-kicker mb-2">Observability</p>
+    <h1 class="fw-black mb-0">System Logs</h1>
+    <p class="text-muted mb-0">Track emails, bookings, admin actions, errors and important platform events.</p>
+  </div>
+</div>
+
+<form method="get" class="glass-card p-3 mb-4">
+  <div class="row g-3 align-items-end">
+    <div class="col-md-3">
+      <label class="form-label small text-muted">Level</label>
+      <select name="level" class="form-select rounded-pill">
+        <option value="">All levels</option>
+        {% for value,label in levels %}<option value="{{ value }}" {% if active_level == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label small text-muted">Category</label>
+      <select name="category" class="form-select rounded-pill">
+        <option value="">All categories</option>
+        {% for value,label in categories %}<option value="{{ value }}" {% if active_category == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label small text-muted">Search</label>
+      <input name="q" value="{{ q }}" class="form-control rounded-pill" placeholder="event, message, actor, related id">
+    </div>
+    <div class="col-md-2">
+      <button class="btn btn-primary rounded-pill w-100">Filter</button>
+    </div>
+  </div>
+</form>
+
+<div class="glass-card p-3">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Time</th><th>Level</th><th>Category</th><th>Event</th><th>Actor</th><th>Related</th><th>Message</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+          <tr>
+            <td class="small text-muted">{{ log.created_at|date:'Y-m-d H:i:s' }}</td>
+            <td><span class="badge rounded-pill {% if log.level == 'ERROR' or log.level == 'CRITICAL' %}text-bg-danger{% elif log.level == 'WARNING' %}text-bg-warning{% else %}text-bg-light text-dark{% endif %}">{{ log.level }}</span></td>
+            <td><span class="badge rounded-pill text-bg-dark">{{ log.category }}</span></td>
+            <td class="fw-semibold">{{ log.event }}</td>
+            <td>{% if log.actor %}{{ log.actor.username }}{% else %}<span class="text-muted">system</span>{% endif %}</td>
+            <td class="small text-muted">{{ log.related_model }}{% if log.related_id %} #{{ log.related_id }}{% endif %}</td>
+            <td class="small">{{ log.message|truncatechars:130 }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7" class="text-center text-muted py-4">No logs yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

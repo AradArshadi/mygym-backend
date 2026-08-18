@@ -1,0 +1,106 @@
+{% load static %}
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% block title %}myGym{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script>
+    (function () {
+      var savedTheme = localStorage.getItem('mygym-theme') || 'light';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    })();
+  </script>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+<nav class="navbar navbar-expand-lg mg-navbar sticky-top">
+  <div class="container py-2">
+    <a class="navbar-brand brand-mark" href="{% url 'landing' %}">my<span>Gym</span></a>
+    <div class="d-flex align-items-center gap-2">
+      <button class="mg-theme-toggle" type="button" data-theme-toggle aria-label="Toggle dark mode" title="Toggle dark/light mode">
+        <span class="theme-icon theme-icon-dark">☾</span>
+        <span class="theme-icon theme-icon-light">☀</span>
+      </button>
+      <button class="navbar-toggler soft-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+    </div>
+    <div class="collapse navbar-collapse" id="mainNav">
+      <ul class="navbar-nav ms-auto align-items-lg-center gap-2 py-3 py-lg-0">
+        {% if not user.is_authenticated or user.role != 'CUSTOMER' %}
+          <li class="nav-item"><a class="nav-link" href="{% url 'gym_list' %}">Explore</a></li>
+        {% endif %}
+        {% if user.is_authenticated %}
+          <li class="nav-item"><a class="nav-link position-relative" href="{% url 'notification_list' %}">Notifications</a></li>
+          {% if user.is_staff or user.is_superuser or user.role == 'ADMIN' %}
+            <li class="nav-item"><a class="btn btn-dark rounded-pill px-3 w-100 w-lg-auto" href="{% url 'control_overview' %}">Control Deck</a></li>
+          {% endif %}
+          {% if user.role == 'OWNER' %}
+            <li class="nav-item"><a class="nav-link" href="{% url 'owner_dashboard' %}">Owner Dashboard</a></li>
+            <li class="nav-item"><a class="btn btn-primary rounded-pill px-4 w-100 w-lg-auto" href="{% url 'owner_gym_create' %}">Add Gym</a></li>
+          {% elif user.role == 'CUSTOMER' %}
+            <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'fitness_home' %}active{% endif %}" href="{% url 'fitness_home' %}">Home</a></li>
+            <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'gym_list' or request.resolver_match.url_name == 'gym_detail' %}active{% endif %}" href="{% url 'gym_list' %}">Explore</a></li>
+            <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'my_memberships' or request.resolver_match.url_name == 'my_sessions' or request.resolver_match.url_name == 'session_detail' %}active{% endif %}" href="{% url 'my_memberships' %}">Visit</a></li>
+            <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'workout_history' or request.resolver_match.url_name == 'log_workout' or request.resolver_match.url_name == 'update_workout_goal' %}active{% endif %}" href="{% url 'workout_history' %}">Activity</a></li>
+            <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'profile_hub' or request.resolver_match.url_name == 'edit_profile' or request.resolver_match.url_name == 'more_menu' or request.resolver_match.url_name == 'discover' or request.resolver_match.url_name == 'chat_home' %}active{% endif %}" href="{% url 'profile_hub' %}">Profile</a></li>
+          {% endif %}
+          <li class="nav-item">
+            <form action="{% url 'logout' %}" method="post" class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-ghost rounded-pill px-4 w-100 w-lg-auto">Logout</button>
+            </form>
+          </li>
+        {% else %}
+          <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">Login</a></li>
+          <li class="nav-item"><a class="btn btn-primary rounded-pill px-4 w-100 w-lg-auto" href="{% url 'register' %}">Join free</a></li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</nav>
+
+{% if messages %}
+  <div class="container mt-3">
+    {% for message in messages %}
+      <div class="alert alert-success rounded-4 shadow-sm mb-2">{{ message }}</div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<main>{% block content %}{% endblock %}</main>
+
+<footer class="mg-footer mt-5">
+  <div class="container py-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 text-muted small">
+    <span>© 2026 myGym Marketplace</span>
+    <span>Discover gyms · Book trials · Grow fitness businesses</span>
+    <span>Powered by <a class="footer-link" href="https://github.com/AradArshadi" target="_blank" rel="noopener noreferrer">Arad Arshadi</a></span>
+  </div>
+</footer>
+{% include 'components/mobile_bottom_nav.html' %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  (function () {
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('mygym-theme', theme);
+      document.querySelectorAll('[data-theme-toggle]').forEach(function (button) {
+        button.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+      });
+    }
+    document.querySelectorAll('[data-theme-toggle]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var current = document.documentElement.getAttribute('data-theme') || 'light';
+        applyTheme(current === 'dark' ? 'light' : 'dark');
+      });
+    });
+    applyTheme(localStorage.getItem('mygym-theme') || document.documentElement.getAttribute('data-theme') || 'light');
+  })();
+</script>
+</body>
+</html>

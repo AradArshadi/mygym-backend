@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Session Detail · myGym{% endblock %}
+{% block content %}
+<section class="dashboard-hero py-5 text-white">
+  <div class="container"><p class="section-kicker text-white-50">One-time session</p><h1 class="display-5 fw-black">{{ session.gym.name }}</h1><p class="lead text-white-75">{{ session.start_time|date:'d M Y, H:i' }}</p></div>
+</section>
+<div class="container py-5">
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <article class="card border-0 shadow-sm rounded-5 p-4">
+        <h2 class="h4 fw-bold">Session details</h2>
+        <p><strong>Gym:</strong> {{ session.gym.name }}</p>
+        <p><strong>Address:</strong> {{ session.gym.address }}</p>
+        <p><strong>Status:</strong> <span class="status-pill status-{{ session.status|lower }}">{{ session.get_status_display }}</span></p>
+        {% if session.booking.plan %}<p><strong>Plan:</strong> {{ session.booking.plan.title }}</p>{% endif %}
+        {% if session.status == 'UPCOMING' %}
+          <form method="post" action="{% url 'cancel_session' session.id %}">{% csrf_token %}<button class="btn btn-outline-secondary rounded-pill">Cancel session</button></form>
+        {% endif %}
+      </article>
+    </div>
+    <div class="col-lg-5">
+      <article class="card border-0 shadow-sm rounded-5 p-4 text-center">
+        <p class="section-kicker">Check-in</p><h2 class="h4 fw-bold">One-time QR</h2>
+        {% if session.qr_data_uri %}<img src="{{ session.qr_data_uri }}" alt="Session QR" class="img-fluid rounded-4 border p-3 mb-3" style="max-width:240px;">{% endif %}
+        <p class="text-muted small">Show this QR at the gym. It becomes invalid after check-in.</p>
+        <a class="btn btn-light rounded-pill" href="{{ session.qr_url }}">Open QR link</a>
+      </article>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block title %}Chat · myGym{% endblock %}
+{% block content %}
+<section class="fitness-shell py-5">
+  <div class="container fitness-narrow">
+    <article class="fitness-card text-center py-5">
+      <div class="fitness-card-label">Chat</div>
+      <h1>Messages are coming soon</h1>
+      <p class="fitness-muted mx-auto" style="max-width:620px;">This space will later support conversations between users, gyms, trainers, and friends. We keep it as a placeholder in v0.9.3 so the mobile app structure is ready without adding DM complexity too early.</p>
+      <a href="{% url 'fitness_home' %}" class="btn btn-light rounded-pill px-4">Back home</a>
+    </article>
+  </div>
+</section>
+{% endblock %}

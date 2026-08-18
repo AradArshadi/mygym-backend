@@ -1,0 +1,6 @@
+{% extends 'emails/base_email.html' %}
+{% block email_content %}
+<p>New review for <strong>{{ gym.name }}</strong>.</p>
+<p><strong>{{ customer.username }}</strong> rated it {{ review.rating }}/5.</p>
+<p>{{ review.comment }}</p>
+{% endblock %}

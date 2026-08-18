@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Edit account · myGym{% endblock %}
+{% block content %}
+<section class="fitness-shell py-5">
+  <div class="container narrow-container">
+    <div class="fitness-page-heading mb-4">
+      <p class="fitness-date">Account</p>
+      <h1>Edit your details</h1>
+      <p class="fitness-muted">Update the public account basics used across bookings, workouts, favorites, and messages later.</p>
+    </div>
+    <form method="post" class="fitness-card premium-form-card">
+      {% csrf_token %}
+      <div class="row g-3">
+        {% for field in form %}
+          <div class="col-md-6 {% if field.name == 'email' %}col-md-6{% endif %}">
+            <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+            {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+      <div class="d-flex gap-2 flex-wrap mt-4">
+        <button class="btn btn-primary rounded-pill px-4" type="submit">Save changes</button>
+        <a class="btn btn-outline-dark rounded-pill owner-outline-action px-4" href="{% url 'profile_hub' %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

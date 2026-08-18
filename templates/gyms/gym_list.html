@@ -1,0 +1,619 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Explore gyms · myGym{% endblock %}
+{% block content %}
+<section class="container explore-search-section">
+  <div class="explore-search-shell">
+    <div class="explore-search-heading">
+      <p class="section-kicker mb-1">Explore gyms</p>
+      <h1>Find your next gym.</h1>
+    </div>
+    <form class="explore-search-form" method="get" action="{% url 'gym_list' %}">
+      <div class="explore-search-field"><span aria-hidden="true">⌕</span><input name="q" placeholder="Gym, facility, address" value="{{ query }}" autocomplete="search"></div>
+      <div class="explore-search-field"><span aria-hidden="true">📍</span><input name="city" placeholder="City" value="{{ city }}" list="city-options"></div>
+      <div class="explore-search-field"><span aria-hidden="true">€</span><input name="max_price" placeholder="Max price" value="{{ max_price }}" inputmode="decimal"></div>
+      <input type="hidden" name="view" value="{{ view_mode }}">
+      {% if min_rating %}<input type="hidden" name="min_rating" value="{{ min_rating }}">{% endif %}
+      {% if sort %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+      {% for fid in selected_facilities %}<input type="hidden" name="facilities" value="{{ fid }}">{% endfor %}
+      <button class="explore-search-submit" type="submit">Search</button>
+    </form>
+    <datalist id="city-options">{% for option in city_options %}<option value="{{ option }}">{% endfor %}</datalist>
+  </div>
+</section>
+
+<section class="container explore-filter-screen">
+  <form class="discovery-filter-card explore-filter-panel" method="get" action="{% url 'gym_list' %}">
+    <input type="hidden" name="view" value="{{ view_mode }}">
+    <input type="hidden" name="q" value="{{ query }}">
+    <input type="hidden" name="city" value="{{ city }}">
+    <input type="hidden" name="max_price" value="{{ max_price }}">
+    <div class="explore-filter-intro">
+      <div><p class="section-kicker mb-1">Refine results</p><h2 class="h4 fw-black mb-1">Facilities, rating and sort</h2><p class="text-muted mb-0">Fine-tune the marketplace after the main search.</p></div>
+    </div>
+    <div class="filter-tools-row">
+      <div class="quick-selects">
+        <label class="mini-select"><span>Rating</span><select name="min_rating" data-mobile-filter-select data-default-value=""><option value="" {% if not min_rating %}selected{% endif %}>Any</option><option value="4.5" {% if min_rating == '4.5' %}selected{% endif %}>4.5+</option><option value="4" {% if min_rating == '4' %}selected{% endif %}>4+</option><option value="3" {% if min_rating == '3' %}selected{% endif %}>3+</option></select></label>
+        <label class="mini-select"><span>Sort</span><select name="sort" data-mobile-filter-select data-default-value="newest"><option value="newest" {% if sort == 'newest' %}selected{% endif %}>Newest</option><option value="rating" {% if sort == 'rating' %}selected{% endif %}>Highest rating</option><option value="price_asc" {% if sort == 'price_asc' %}selected{% endif %}>Lowest price</option><option value="price_desc" {% if sort == 'price_desc' %}selected{% endif %}>Highest price</option><option value="name" {% if sort == 'name' %}selected{% endif %}>Name A–Z</option></select></label>
+      </div>
+      <details class="facility-dropdown" {% if selected_facilities %}open{% endif %}>
+        <summary><span>Facilities</span>{% if selected_facilities %}<strong>{{ selected_facilities|length }}</strong>{% endif %}</summary>
+        <div class="facility-menu">{% for facility in facility_options %}<label class="facility-pill-option"><input type="checkbox" name="facilities" value="{{ facility.id }}" {% if facility.id|stringformat:'s' in selected_facilities %}checked{% endif %}><span>{{ facility.name }}</span></label>{% empty %}<span class="text-muted small">No facilities available yet.</span>{% endfor %}</div>
+      </details>
+      <div class="filter-actions"><a class="clear-filter-link" href="{% url 'gym_list' %}">Clear</a><button class="btn btn-primary filter-apply-btn" type="submit">Apply</button></div>
+    </div>
+  </form>
+</section>
+
+<section class="container py-5 explore-results-section{% if user.is_authenticated and user.role == 'CUSTOMER' %} has-mobile-bottom-nav{% endif %}" data-explore-results>
+  <div class="explore-results-toolbar explore-results-toolbar--desktop">
+    <div class="explore-toolbar-copy">
+      <p class="section-kicker">Explore</p>
+      <h2 class="section-title mb-0">Available gyms</h2>
+      <p class="text-muted mb-0">{{ results_count }} result{{ results_count|pluralize }}</p>
+    </div>
+    <div class="view-switch" role="group" aria-label="Explore view">
+      <a class="{% if view_mode == 'cards' %}active{% endif %}" href="?{% if filter_query_string %}{{ filter_query_string }}&{% endif %}view=cards">Cards</a>
+      <a class="{% if view_mode == 'map' %}active{% endif %}" href="?{% if filter_query_string %}{{ filter_query_string }}&{% endif %}view=map">Map</a>
+    </div>
+  </div>
+
+  <div class="mobile-explore-filter-backdrop" data-mobile-filter-backdrop hidden></div>
+  <section class="mobile-explore-filter-sheet" id="mobile-explore-filter-sheet" data-mobile-filter-sheet role="dialog" aria-modal="true" aria-labelledby="mobile-filter-title" hidden>
+    <div class="mobile-filter-handle" aria-hidden="true"></div>
+    <header class="mobile-filter-header">
+      <div>
+        <p class="section-kicker mb-1">Refine results</p>
+        <h2 id="mobile-filter-title">Filters</h2>
+      </div>
+      <button type="button" class="mobile-filter-close" data-mobile-filter-close aria-label="Close filters">×</button>
+    </header>
+    <form class="mobile-filter-form" method="get">
+      <input type="hidden" name="view" value="{{ view_mode }}">
+      <input type="hidden" name="q" value="{{ query }}">
+      <input type="hidden" name="city" value="{{ city }}">
+      <input type="hidden" name="max_price" value="{{ max_price }}">
+
+      <div class="mobile-filter-body">
+      <div class="mobile-filter-grid">
+        <label class="mobile-filter-field">
+          <span>Minimum rating</span>
+          <select name="min_rating" data-mobile-filter-select data-default-value="">
+            <option value="" {% if not min_rating %}selected{% endif %}>Any rating</option>
+            <option value="4.5" {% if min_rating == '4.5' %}selected{% endif %}>4.5 and above</option>
+            <option value="4" {% if min_rating == '4' %}selected{% endif %}>4 and above</option>
+            <option value="3" {% if min_rating == '3' %}selected{% endif %}>3 and above</option>
+          </select>
+        </label>
+        <label class="mobile-filter-field">
+          <span>Sort by</span>
+          <select name="sort" data-mobile-filter-select data-default-value="newest">
+            <option value="newest" {% if sort == 'newest' %}selected{% endif %}>Newest</option>
+            <option value="rating" {% if sort == 'rating' %}selected{% endif %}>Highest rating</option>
+            <option value="price_asc" {% if sort == 'price_asc' %}selected{% endif %}>Lowest price</option>
+            <option value="price_desc" {% if sort == 'price_desc' %}selected{% endif %}>Highest price</option>
+            <option value="name" {% if sort == 'name' %}selected{% endif %}>Name A–Z</option>
+          </select>
+        </label>
+      </div>
+
+      <fieldset class="mobile-filter-facilities">
+        <legend>Facilities</legend>
+        <div class="mobile-filter-chips">
+          {% for facility in facility_options %}
+            <label>
+              <input type="checkbox" name="facilities" value="{{ facility.id }}" {% if facility.id|stringformat:'s' in selected_facilities %}checked{% endif %}>
+              <span>{{ facility.name }}</span>
+            </label>
+          {% empty %}
+            <p class="text-muted small mb-0">No facilities available yet.</p>
+          {% endfor %}
+        </div>
+      </fieldset>
+      </div>
+
+      <div class="mobile-filter-footer">
+        <a href="{% url 'gym_list' %}" class="mobile-filter-clear">Clear</a>
+        <button class="mobile-filter-apply" type="submit">Apply filters</button>
+      </div>
+    </form>
+  </section>
+
+  <div class="mobile-explore-search-backdrop" data-mobile-search-backdrop hidden></div>
+  <section class="mobile-explore-search-sheet" id="mobile-explore-search-sheet" data-mobile-search-sheet role="dialog" aria-modal="true" aria-labelledby="mobile-search-title" hidden>
+    <header class="mobile-search-header">
+      <div><p class="section-kicker mb-1">Explore gyms</p><h2 id="mobile-search-title">Search</h2></div>
+      <button type="button" class="mobile-filter-close" data-mobile-search-close aria-label="Close search">×</button>
+    </header>
+    <form class="mobile-search-form" method="get" action="{% url 'gym_list' %}">
+      <input type="hidden" name="view" value="{{ view_mode }}">
+      {% if min_rating %}<input type="hidden" name="min_rating" value="{{ min_rating }}">{% endif %}
+      {% if sort %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+      {% for fid in selected_facilities %}<input type="hidden" name="facilities" value="{{ fid }}">{% endfor %}
+      <label class="mobile-search-field"><span>Gym, facility or address</span><input name="q" value="{{ query }}" placeholder="What are you looking for?" autocomplete="search"></label>
+      <label class="mobile-search-field"><span>City</span><input name="city" value="{{ city }}" placeholder="City" list="mobile-city-options"></label>
+      <label class="mobile-search-field"><span>Maximum price</span><input name="max_price" value="{{ max_price }}" placeholder="No limit" inputmode="decimal"></label>
+      <datalist id="mobile-city-options">{% for option in city_options %}<option value="{{ option }}">{% endfor %}</datalist>
+      <div class="mobile-search-footer"><a href="{% url 'gym_list' %}" class="mobile-filter-clear">Reset</a><button type="submit" class="mobile-filter-apply">Search gyms</button></div>
+    </form>
+  </section>
+
+  {% if view_mode == 'map' %}
+    <div class="mobile-explore-fixed-toolbar">
+      <div class="explore-toolbar-copy">
+        <p class="section-kicker">Explore</p>
+        <h2>Available gyms</h2>
+        <p>{{ results_count }} result{{ results_count|pluralize }}</p>
+      </div>
+
+      <button class="mobile-explore-search-button" type="button" data-mobile-search-open aria-haspopup="dialog" aria-controls="mobile-explore-search-sheet" aria-label="Search gyms">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/></svg>
+        <span>Search</span>
+      </button>
+
+      <button class="mobile-explore-filter-button" type="button" data-mobile-filter-open aria-haspopup="dialog" aria-controls="mobile-explore-filter-sheet">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6"/></svg>
+        <span>Filters</span>
+        {% if min_rating or selected_facilities or sort != 'newest' %}<i aria-label="Filters active"></i>{% endif %}
+      </button>
+      <div class="view-switch" role="group" aria-label="Explore view">
+        <a href="?{% if filter_query_string %}{{ filter_query_string }}&{% endif %}view=cards">Cards</a>
+        <a class="active" href="?{% if filter_query_string %}{{ filter_query_string }}&{% endif %}view=map">Map</a>
+      </div>
+    </div>
+    <div class="neo-panel overflow-hidden">
+      <div id="gym-map"></div>
+      <div class="p-3 text-muted small">Gyms without coordinates remain available in Cards view but are not pinned on the map.</div>
+    </div>
+    {{ map_gyms|json_script:"map-gyms-data" }}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+      const gyms = JSON.parse(document.getElementById('map-gyms-data').textContent);
+      const map = L.map('gym-map').setView([49.8988, 10.9028], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, attribution: '&copy; OpenStreetMap contributors'}).addTo(map);
+      const markers = [];
+      gyms.forEach(gym => { const marker = L.marker([gym.lat, gym.lng]).addTo(map).bindPopup(`<strong>${gym.name}</strong><br>${gym.city}<br>From €${gym.price}<br><a href="${gym.url}">View gym</a>`); markers.push(marker); });
+      if (markers.length) { map.fitBounds(L.featureGroup(markers).getBounds().pad(0.2)); } else { L.popup().setLatLng([49.8988, 10.9028]).setContent('No gyms with coordinates found yet.').openOn(map); }
+      setTimeout(() => map.invalidateSize(), 150);
+    </script>
+  {% else %}
+    <section class="mobile-explore-shell" data-mobile-explore-stage>
+      <div class="mobile-explore-fixed-toolbar" data-mobile-explore-toolbar>
+        <div class="explore-toolbar-copy">
+          <p class="section-kicker">Explore</p>
+          <h2>Available gyms</h2>
+          <p>Swipe one card at a time · {{ results_count }} result{{ results_count|pluralize }}</p>
+        </div>
+
+        <button class="mobile-explore-search-button" type="button" data-mobile-search-open aria-haspopup="dialog" aria-controls="mobile-explore-search-sheet" aria-label="Search gyms">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/></svg>
+        <span>Search</span>
+      </button>
+
+      <button class="mobile-explore-filter-button" type="button" data-mobile-filter-open aria-haspopup="dialog" aria-controls="mobile-explore-filter-sheet">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6"/></svg>
+          <span>Filters</span>
+          {% if min_rating or selected_facilities or sort != 'newest' %}<i aria-label="Filters active"></i>{% endif %}
+        </button>
+        <div class="view-switch" role="group" aria-label="Explore view">
+          <a class="active" href="?{% if filter_query_string %}{{ filter_query_string }}&{% endif %}view=cards">Cards</a>
+          <a href="?{% if filter_query_string %}{{ filter_query_string }}&{% endif %}view=map">Map</a>
+        </div>
+      </div>
+
+      <div class="row g-4 mobile-luxury-gym-deck" data-mobile-gym-deck data-next-url="{% if page_obj.has_next %}?{% if page_query_string %}{{ page_query_string }}&{% endif %}page={{ page_obj.next_page_number }}{% endif %}">
+      {% for gym in gyms %}
+        <div class="col-md-6 col-xl-4 mobile-luxury-gym-slide" data-mobile-gym-slide data-gym-id="{{ gym.id }}" tabindex="0">
+          <article class="neo-gym-card h-100 mobile-luxury-gym-card">
+            <a class="gym-image-wrap" href="{% if user.is_authenticated %}{% url 'gym_detail' gym.slug %}{% else %}{% url 'login' %}?next={% url 'gym_detail' gym.slug %}{% endif %}">
+              {% with cover=gym.display_images.0 %}
+                {% if cover %}<img src="{{ cover.image_url }}" alt="{{ cover.alt_text|default:gym.name }}">{% else %}<div class="gym-card-placeholder">{{ gym.name|slice:':1' }}</div>{% endif %}
+              {% endwith %}
+              <span class="price-chip">from €{{ gym.starting_price }}</span>
+            </a>
+            {% if user.is_authenticated %}
+              <form method="post" action="{% url 'toggle_favorite' gym.id %}" class="favorite-float-form">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button class="favorite-float-btn {% if gym.id in favorite_ids %}is-active{% endif %}" type="submit" aria-label="Toggle favorite for {{ gym.name }}">{% if gym.id in favorite_ids %}★{% else %}☆{% endif %}</button>
+              </form>
+            {% endif %}
+            <div class="p-4 mobile-gym-card-body">
+              <div class="mobile-gym-meta-row">
+                <p class="mb-0 text-muted small mobile-gym-location" dir="auto">📍 {{ gym.city }}</p>
+                <p class="mb-0 rating-badge">{% if gym.avg_rating %}★ {{ gym.avg_rating|floatformat:1 }}{% else %}New{% endif %}</p>
+              </div>
+              <h3 class="h4 fw-black mb-2" dir="auto">{{ gym.name }}</h3>
+              <p class="text-muted mobile-gym-summary" dir="auto">{{ gym.description|truncatewords:16 }}</p>
+              <div class="mobile-gym-feature-preview">
+                {% for f in gym.facilities.all|slice:':4' %}<span class="chip" dir="auto">{{ f.name }}</span>{% endfor %}
+              </div>
+              <details class="mobile-gym-more-info">
+                <summary>More info</summary>
+                <div class="mobile-gym-more-panel">
+                  {% if gym.description %}<p dir="auto">{{ gym.description }}</p>{% endif %}
+                  <div class="mobile-gym-all-features">{% for f in gym.facilities.all %}<span class="chip" dir="auto">{{ f.name }}</span>{% empty %}<span class="text-muted small">No facilities listed.</span>{% endfor %}</div>
+                </div>
+              </details>
+              {% if user.is_authenticated %}<a class="btn btn-dark rounded-pill w-100 mobile-gym-primary-action" href="{% url 'gym_detail' gym.slug %}">View gym</a>{% else %}<a class="btn btn-dark rounded-pill w-100 mobile-gym-primary-action" href="{% url 'login' %}?next={% url 'gym_detail' gym.slug %}">Login / signup to view</a>{% endif %}
+            </div>
+          </article>
+        </div>
+      {% empty %}
+        <div class="col-12"><div class="empty-state">No gyms found. Try another search or reset filters.</div></div>
+      {% endfor %}
+        <div class="explore-feed-status" data-explore-feed-status aria-live="polite" hidden>
+          <span class="explore-feed-loader" data-explore-feed-loader hidden>Loading more gyms…</span>
+          <span class="explore-feed-end" data-explore-feed-end hidden>You reached the end of the road.</span>
+        </div>
+      </div>
+    </section>
+  {% endif %}
+
+  {% if page_obj.has_other_pages %}
+    <nav class="pagination-shell mt-5" aria-label="Explore pagination">
+      <div class="pagination-summary">Page {{ page_obj.number }} of {{ paginator.num_pages }} · 20 gyms per page</div>
+      <div class="pagination-actions">
+        {% if page_obj.has_previous %}<a class="btn btn-outline-dark rounded-pill owner-outline-action" href="?{% if page_query_string %}{{ page_query_string }}&{% endif %}page={{ page_obj.previous_page_number }}">← Previous</a>{% else %}<span class="btn btn-outline-secondary rounded-pill disabled">← Previous</span>{% endif %}
+        {% if page_obj.has_next %}<a class="btn btn-primary rounded-pill" href="?{% if page_query_string %}{{ page_query_string }}&{% endif %}page={{ page_obj.next_page_number }}">Next 20 →</a>{% else %}<span class="btn btn-outline-secondary rounded-pill disabled">Next 20 →</span>{% endif %}
+      </div>
+    </nav>
+  {% endif %}
+</section>
+
+<script>
+(function () {
+  var filterSheet = document.querySelector('[data-mobile-filter-sheet]');
+  var filterBackdrop = document.querySelector('[data-mobile-filter-backdrop]');
+  var filterOpenButtons = Array.from(document.querySelectorAll('[data-mobile-filter-open]'));
+  var filterCloseButton = document.querySelector('[data-mobile-filter-close]');
+  var lastFilterTrigger = null;
+
+  function setFilterSheet(open, trigger) {
+    if (!filterSheet || !filterBackdrop) return;
+    if (open) {
+      lastFilterTrigger = trigger || document.activeElement;
+      filterSheet.hidden = false;
+      filterBackdrop.hidden = false;
+      document.body.classList.add('mobile-filter-open');
+      window.requestAnimationFrame(function () {
+        filterSheet.classList.add('is-open');
+        filterBackdrop.classList.add('is-open');
+        var firstField = filterSheet.querySelector('select, input, button');
+        if (firstField) firstField.focus({ preventScroll: true });
+      });
+    } else {
+      filterSheet.classList.remove('is-open');
+      filterBackdrop.classList.remove('is-open');
+      document.body.classList.remove('mobile-filter-open');
+      window.setTimeout(function () {
+        filterSheet.hidden = true;
+        filterBackdrop.hidden = true;
+      }, 180);
+      if (lastFilterTrigger && lastFilterTrigger.focus) lastFilterTrigger.focus({ preventScroll: true });
+    }
+  }
+
+  filterOpenButtons.forEach(function (button) {
+    button.addEventListener('click', function () { setFilterSheet(true, button); });
+  });
+  if (filterCloseButton) filterCloseButton.addEventListener('click', function () { setFilterSheet(false); });
+  if (filterBackdrop) filterBackdrop.addEventListener('click', function () { setFilterSheet(false); });
+
+  function refreshFilterSelectionState() {
+    if (!filterSheet) return;
+    filterSheet.querySelectorAll('[data-mobile-filter-select]').forEach(function (select) {
+      var defaultValue = select.getAttribute('data-default-value') || '';
+      select.classList.toggle('is-selected', select.value !== defaultValue);
+    });
+  }
+
+  if (filterSheet) {
+    filterSheet.addEventListener('change', function (event) {
+      if (event.target.matches('[data-mobile-filter-select]')) {
+        refreshFilterSelectionState();
+      }
+    });
+    refreshFilterSelectionState();
+  }
+
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape' && filterSheet && !filterSheet.hidden) setFilterSheet(false);
+  });
+
+  var searchSheet = document.querySelector('[data-mobile-search-sheet]');
+  var searchBackdrop = document.querySelector('[data-mobile-search-backdrop]');
+  var searchOpenButtons = Array.from(document.querySelectorAll('[data-mobile-search-open]'));
+  var searchCloseButton = document.querySelector('[data-mobile-search-close]');
+  var lastSearchTrigger = null;
+
+  function setSearchSheet(open, trigger) {
+    if (!searchSheet || !searchBackdrop) return;
+    if (open) {
+      if (filterSheet && !filterSheet.hidden) setFilterSheet(false);
+      lastSearchTrigger = trigger || document.activeElement;
+      searchSheet.hidden = false;
+      searchBackdrop.hidden = false;
+      document.body.classList.add('mobile-search-open');
+      window.requestAnimationFrame(function () {
+        searchSheet.classList.add('is-open');
+        searchBackdrop.classList.add('is-open');
+        var firstField = searchSheet.querySelector('input:not([type=hidden])');
+        if (firstField) firstField.focus({ preventScroll: true });
+      });
+    } else {
+      searchSheet.classList.remove('is-open');
+      searchBackdrop.classList.remove('is-open');
+      document.body.classList.remove('mobile-search-open');
+      window.setTimeout(function () {
+        searchSheet.hidden = true;
+        searchBackdrop.hidden = true;
+      }, 180);
+      if (lastSearchTrigger && lastSearchTrigger.focus) lastSearchTrigger.focus({ preventScroll: true });
+    }
+  }
+
+  searchOpenButtons.forEach(function (button) {
+    button.addEventListener('click', function () { setSearchSheet(true, button); });
+  });
+  if (searchCloseButton) searchCloseButton.addEventListener('click', function () { setSearchSheet(false); });
+  if (searchBackdrop) searchBackdrop.addEventListener('click', function () { setSearchSheet(false); });
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape' && searchSheet && !searchSheet.hidden) setSearchSheet(false);
+  });
+
+  var deck = document.querySelector('[data-mobile-gym-deck]');
+  if (!deck) return;
+
+  var shell = document.querySelector('[data-mobile-explore-stage]');
+  var toolbar = shell ? shell.querySelector('[data-mobile-explore-toolbar]') : null;
+  var siteHeader = document.querySelector('.mg-navbar');
+  var pagination = document.querySelector('.explore-results-section > .pagination-shell');
+  var mobileBottomNav = document.querySelector('.mg-mobile-tabbar');
+  var feedStatus = deck.querySelector('[data-explore-feed-status]');
+  var loader = deck.querySelector('[data-explore-feed-loader]');
+  var endMessage = deck.querySelector('[data-explore-feed-end]');
+  var mobileQuery = window.matchMedia('(max-width: 767.98px)');
+  var slides = [];
+  var observer = null;
+  var activeIndex = 0;
+  var isLoading = false;
+  var nextUrl = deck.dataset.nextUrl || '';
+  var scrollFrame = 0;
+  var headerResizeObserver = null;
+  var hasAlignedInitialFeed = false;
+
+  function updateMobileMeasurements() {
+    if (!shell) return;
+    var headerHeight = siteHeader ? Math.ceil(siteHeader.getBoundingClientRect().height) : 68;
+    var toolbarHeight = toolbar ? Math.ceil(toolbar.getBoundingClientRect().height) : 84;
+    var bottomNavHeight = mobileBottomNav ? Math.ceil(mobileBottomNav.getBoundingClientRect().height) : 0;
+    shell.style.setProperty('--mobile-site-header-height', headerHeight + 'px');
+    shell.style.setProperty('--mobile-toolbar-height', toolbarHeight + 'px');
+    shell.style.setProperty('--mobile-bottom-nav-height', bottomNavHeight + 'px');
+  }
+
+  function alignFeedBelowHeader() {
+    if (!mobileQuery.matches || !shell || hasAlignedInitialFeed) return;
+    updateMobileMeasurements();
+    var headerHeight = siteHeader ? Math.ceil(siteHeader.getBoundingClientRect().height) : 68;
+    var targetTop = Math.max(0, Math.round(shell.getBoundingClientRect().top + window.scrollY - headerHeight));
+    if (window.scrollY + 12 < targetTop) {
+      window.scrollTo({ top: targetTop, behavior: 'auto' });
+    }
+    hasAlignedInitialFeed = true;
+  }
+
+  function setFeedStatus(kind, message) {
+    if (!feedStatus || !loader || !endMessage) return;
+    loader.hidden = kind !== 'loading' && kind !== 'error';
+    endMessage.hidden = kind !== 'end';
+    if (message) loader.textContent = message;
+    else if (kind === 'loading') loader.textContent = 'Loading more gyms…';
+    feedStatus.hidden = !kind;
+  }
+
+  function refreshSlides() {
+    slides = Array.from(deck.querySelectorAll('[data-mobile-gym-slide]'));
+  }
+
+  function wireMoreInfo(targetSlides) {
+    targetSlides.forEach(function (slide) {
+      var details = slide.querySelector('.mobile-gym-more-info');
+      if (!details || details.dataset.exploreBound === 'true') return;
+      details.dataset.exploreBound = 'true';
+      details.addEventListener('toggle', function () {
+        if (details.open) {
+          deck.querySelectorAll('.mobile-gym-more-info[open]').forEach(function (other) {
+            if (other !== details) other.open = false;
+          });
+        }
+        slide.classList.toggle('has-open-details', details.open);
+      });
+    });
+  }
+
+  function loadThreshold() {
+    return Math.max(0, Math.floor(slides.length * 0.5));
+  }
+
+  function maybeLoadNextPage() {
+    if (activeIndex >= loadThreshold()) loadNextPage();
+  }
+
+  function setActive(index, allowLoad) {
+    if (!slides.length) return;
+    activeIndex = Math.max(0, Math.min(index, slides.length - 1));
+    slides.forEach(function (slide, slideIndex) {
+      slide.classList.toggle('is-active', slideIndex === activeIndex);
+      slide.classList.toggle('is-next', slideIndex === activeIndex + 1);
+      slide.classList.toggle('is-previous', slideIndex === activeIndex - 1);
+      if (slideIndex === activeIndex) slide.setAttribute('aria-current', 'true');
+      else slide.removeAttribute('aria-current');
+    });
+    if (allowLoad !== false) maybeLoadNextPage();
+  }
+
+  function nearestSlideIndex() {
+    if (!slides.length) return 0;
+    var deckTop = deck.getBoundingClientRect().top;
+    var bestIndex = 0;
+    var bestDistance = Number.POSITIVE_INFINITY;
+    slides.forEach(function (slide, index) {
+      var distance = Math.abs(slide.getBoundingClientRect().top - deckTop);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestIndex = index;
+      }
+    });
+    return bestIndex;
+  }
+
+  function observeSlides() {
+    if (observer) observer.disconnect();
+    observer = null;
+    if (!mobileQuery.matches || !slides.length) return;
+
+    observer = new IntersectionObserver(function (entries) {
+      var visible = entries.filter(function (entry) {
+        return entry.isIntersecting && entry.intersectionRatio >= 0.5;
+      }).sort(function (a, b) {
+        return b.intersectionRatio - a.intersectionRatio;
+      });
+      if (!visible.length) return;
+      var index = slides.indexOf(visible[0].target);
+      if (index >= 0) setActive(index);
+    }, {
+      root: deck,
+      threshold: [0.5, 0.65, 0.8, 0.95]
+    });
+
+    slides.forEach(function (slide) { observer.observe(slide); });
+  }
+
+  function absoluteNextUrl(relativeUrl) {
+    return relativeUrl ? new URL(relativeUrl, window.location.href).toString() : '';
+  }
+
+  async function loadNextPage() {
+    if (!mobileQuery.matches || isLoading || !nextUrl) {
+      if (!nextUrl && slides.length) setFeedStatus('end');
+      return;
+    }
+
+    isLoading = true;
+    setFeedStatus('loading');
+
+    try {
+      var response = await fetch(absoluteNextUrl(nextUrl), {
+        credentials: 'same-origin',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      if (!response.ok) throw new Error('Could not load the next gyms.');
+
+      var html = await response.text();
+      var parsed = new DOMParser().parseFromString(html, 'text/html');
+      var incomingDeck = parsed.querySelector('[data-mobile-gym-deck]');
+      if (!incomingDeck) throw new Error('The next gym page was incomplete.');
+
+      var knownGymIds = new Set(slides.map(function (slide) { return slide.dataset.gymId; }));
+      var incomingSlides = Array.from(incomingDeck.querySelectorAll('[data-mobile-gym-slide]'));
+      var appendedSlides = [];
+
+      incomingSlides.forEach(function (slide) {
+        var gymId = slide.dataset.gymId;
+        if (gymId && knownGymIds.has(gymId)) return;
+        var importedSlide = document.importNode(slide, true);
+        deck.insertBefore(importedSlide, feedStatus);
+        appendedSlides.push(importedSlide);
+        if (gymId) knownGymIds.add(gymId);
+      });
+
+      nextUrl = incomingDeck.dataset.nextUrl || '';
+      deck.dataset.nextUrl = nextUrl;
+      refreshSlides();
+      wireMoreInfo(appendedSlides);
+      observeSlides();
+      setActive(activeIndex, false);
+
+      if (!nextUrl) setFeedStatus('end');
+      else setFeedStatus('');
+    } catch (error) {
+      setFeedStatus('error', 'Could not load more gyms. Swipe again to retry.');
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  function enableMobileFeed() {
+    document.body.classList.add('explore-feed-active');
+    if (pagination) pagination.classList.add('mobile-pagination-hidden');
+    refreshSlides();
+    wireMoreInfo(slides);
+    setActive(nearestSlideIndex(), false);
+    observeSlides();
+    updateMobileMeasurements();
+    window.requestAnimationFrame(alignFeedBelowHeader);
+    if (siteHeader && window.ResizeObserver && !headerResizeObserver) {
+      headerResizeObserver = new ResizeObserver(updateMobileMeasurements);
+      headerResizeObserver.observe(siteHeader);
+      if (mobileBottomNav) headerResizeObserver.observe(mobileBottomNav);
+    }
+    if (!nextUrl && slides.length) setFeedStatus('end');
+  }
+
+  function disableMobileFeed() {
+    document.body.classList.remove('explore-feed-active');
+    if (pagination) pagination.classList.remove('mobile-pagination-hidden');
+    if (observer) observer.disconnect();
+    observer = null;
+    if (headerResizeObserver) headerResizeObserver.disconnect();
+    headerResizeObserver = null;
+    setFeedStatus('');
+    slides.forEach(function (slide) {
+      slide.classList.remove('is-active', 'is-next', 'is-previous', 'has-open-details');
+      slide.removeAttribute('aria-current');
+    });
+  }
+
+  function syncMode() {
+    if (mobileQuery.matches) enableMobileFeed();
+    else disableMobileFeed();
+  }
+
+  deck.addEventListener('scroll', function () {
+    if (!mobileQuery.matches || scrollFrame) return;
+    scrollFrame = window.requestAnimationFrame(function () {
+      scrollFrame = 0;
+      setActive(nearestSlideIndex());
+    });
+  }, { passive: true });
+
+  window.addEventListener('resize', function () {
+    if (mobileQuery.matches) updateMobileMeasurements();
+  }, { passive: true });
+
+  window.addEventListener('orientationchange', function () {
+    window.setTimeout(function () {
+      hasAlignedInitialFeed = false;
+      if (mobileQuery.matches) {
+        updateMobileMeasurements();
+        alignFeedBelowHeader();
+      }
+    }, 120);
+  });
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', function () {
+      if (mobileQuery.matches) updateMobileMeasurements();
+    }, { passive: true });
+  }
+
+  if (mobileQuery.addEventListener) mobileQuery.addEventListener('change', syncMode);
+  else mobileQuery.addListener(syncMode);
+
+  syncMode();
+})();
+</script>
+{% endblock %}

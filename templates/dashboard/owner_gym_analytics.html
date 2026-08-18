@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block title %}{{ analytics.gym.name }} Analytics · myGym{% endblock %}
+{% block content %}
+<section class="owner-analytics-hero py-5 text-white">
+  <div class="container d-flex flex-column flex-lg-row justify-content-between gap-4 align-items-lg-end">
+    <div>
+      <p class="section-kicker text-white-50">Gym Analytics</p>
+      <h1 class="display-5 fw-black mb-2">{{ analytics.gym.name }}</h1>
+      <p class="lead text-white-75 mb-0">QR traffic, peak arrival times, growth, estimated income, and booking conversion.</p>
+    </div>
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+      <div class="analytics-range-switcher">{% for option in range_options %}<a class="{% if option == days %}active{% endif %}" href="?days={{ option }}">{{ option }}d</a>{% endfor %}</div>
+      <a class="btn btn-outline-light rounded-pill" href="{% url 'owner_analytics' %}?days={{ days }}">Portfolio</a>
+    </div>
+  </div>
+</section>
+
+<div class="container py-5 analytics-dashboard-shell">
+  <div class="analytics-stat-grid mb-4">
+    <article class="analytics-kpi-card"><span>Peak time</span><strong>{{ analytics.peak_label }}</strong><small>{% if analytics.peak.max_count %}{{ analytics.peak.max_count }} arrival(s){% else %}No traffic yet{% endif %}</small></article>
+    <article class="analytics-kpi-card"><span>Check-ins</span><strong>{{ analytics.total_checkins }}</strong><small>QR validated entries</small></article>
+    <article class="analytics-kpi-card accent"><span>Estimated income</span><strong>€{{ analytics.income.total }}</strong><small>Scalable streams</small></article>
+    <article class="analytics-kpi-card"><span>New members</span><strong>{{ analytics.growth.new_members }}</strong><small>{% if analytics.growth.change_pct_known %}{{ analytics.growth.change_pct|floatformat:1 }}% vs previous{% else %}No previous data{% endif %}</small></article>
+    <article class="analytics-kpi-card"><span>Conversion</span><strong>{{ analytics.conversion.rate }}%</strong><small>{{ analytics.conversion.confirmed }}/{{ analytics.conversion.total }} confirmed</small></article>
+    <article class="analytics-kpi-card"><span>Favorites</span><strong>{{ analytics.favorites }}</strong><small>Saved by customers</small></article>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-xl-8">
+      <article class="analytics-panel h-100">
+        <div class="analytics-panel-header">
+          <div><p class="section-kicker mb-1">Peak arrival times</p><h2>Member traffic by hour</h2></div>
+          <span>{{ analytics.start|date:'M d' }} → {{ analytics.end|date:'M d' }}</span>
+        </div>
+        <div class="peak-chart" aria-label="Peak times chart">
+          {% for hour in analytics.peak.hours %}
+            <div class="peak-bar-wrap" title="{{ hour.label }} · {{ hour.count }} check-ins">
+              <div class="peak-bar {% if hour.is_peak %}is-peak{% endif %}" style="height: {{ hour.height }}%;"></div>
+              {% if forloop.counter0|divisibleby:3 %}<small>{{ hour.hour }}</small>{% endif %}
+            </div>
+          {% endfor %}
+        </div>
+        <p class="analytics-note mb-0">Like Google Maps traffic logic: this is based on real QR check-ins, so the chart becomes smarter as members validate entry.</p>
+      </article>
+    </div>
+    <div class="col-xl-4">
+      <article class="analytics-panel h-100">
+        <div class="analytics-panel-header compact"><div><p class="section-kicker mb-1">Busy days</p><h2>Weekday traffic</h2></div></div>
+        <div class="weekday-traffic-list">
+          {% for day in analytics.traffic_days %}
+            <div class="weekday-row"><span>{{ day.label }}</span><div><i style="width: {{ day.width }}%;"></i></div><strong>{{ day.count }}</strong></div>
+          {% endfor %}
+        </div>
+      </article>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-lg-4">
+      <article class="analytics-panel h-100">
+        <div class="analytics-panel-header compact"><div><p class="section-kicker mb-1">Growth</p><h2>Membership growth</h2></div></div>
+        <div class="analytics-big-number"><strong>{{ analytics.growth.active_members }}</strong><span>active members</span></div>
+        <div class="mini-column-chart">
+          {% for point in analytics.growth.trend %}<div class="mini-col" title="{{ point.label }} · {{ point.count }}"><i style="height: {{ point.height|default:4 }}%;"></i><small>{{ point.count }}</small></div>{% empty %}<p class="owner-muted">No new subscriptions in this range yet.</p>{% endfor %}
+        </div>
+      </article>
+    </div>
+    <div class="col-lg-4">
+      <article class="analytics-panel h-100">
+        <div class="analytics-panel-header compact"><div><p class="section-kicker mb-1">Income</p><h2>Revenue streams</h2></div></div>
+        <div class="analytics-big-number accent"><strong>€{{ analytics.income.total }}</strong><span>estimated total</span></div>
+        <div class="income-stream-list">
+          {% for stream in analytics.income.streams %}<div><span>{{ stream.label }}</span><strong>€{{ stream.amount }}</strong><small>{{ stream.count }} item(s) · {{ stream.description }}</small></div>{% endfor %}
+        </div>
+      </article>
+    </div>
+    <div class="col-lg-4">
+      <article class="analytics-panel h-100">
+        <div class="analytics-panel-header compact"><div><p class="section-kicker mb-1">Conversion</p><h2>Booking funnel</h2></div></div>
+        <div class="conversion-ring" style="--rate-percent: {{ analytics.conversion.rate }}%;"><strong>{{ analytics.conversion.rate }}%</strong><span>confirmed</span></div>
+        <div class="conversion-breakdown">
+          <span>Requests <strong>{{ analytics.conversion.total }}</strong></span>
+          <span>Confirmed <strong>{{ analytics.conversion.confirmed }}</strong></span>
+          <span>Pending <strong>{{ analytics.conversion.pending }}</strong></span>
+          <span>Rejected <strong>{{ analytics.conversion.rejected }}</strong></span>
+          <span>Cancelled <strong>{{ analytics.conversion.cancelled }}</strong></span>
+        </div>
+      </article>
+    </div>
+  </div>
+
+  <article class="analytics-panel">
+    <div class="analytics-panel-header compact"><div><p class="section-kicker mb-1">Live operations</p><h2>Recent QR check-ins</h2></div></div>
+    <div class="analytics-checkin-list">
+      {% for checkin in analytics.recent_checkins %}<div class="owner-list-row"><div><strong>{{ checkin.customer.get_full_name|default:checkin.customer.username }}</strong><p>{{ checkin.get_checkin_type_display }} · {{ checkin.checked_in_at|date:'D, d M · H:i' }}</p></div></div>{% empty %}<div class="owner-empty-state">No QR check-ins yet.</div>{% endfor %}
+    </div>
+  </article>
+</div>
+{% endblock %}

@@ -1,0 +1,11 @@
+{% extends 'emails/base_email.html' %}
+{% block email_content %}
+<p>New booking request for <strong>{{ gym.name }}</strong>.</p>
+<ul>
+  <li>Customer: {{ customer.get_full_name|default:customer.username }}</li>
+  <li>Email: {{ customer.email|default:'—' }}</li>
+  <li>Date/time: {{ booking.booking_datetime|date:'d M Y, H:i' }}</li>
+  {% if booking.plan %}<li>Plan: {{ booking.plan.title }}</li>{% endif %}
+</ul>
+<p>Open the owner dashboard to accept or reject the request.</p>
+{% endblock %}

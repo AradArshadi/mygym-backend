@@ -1,0 +1,6 @@
+{% extends "emails/base_email.html" %}
+{% block content %}
+<h1 style="margin:0 0 12px;font-size:26px;">Gym {{ action_text }}</h1>
+<p style="font-size:16px;line-height:1.7;color:#555;">Hi {{ owner.username }}, your gym <strong>{{ gym.name }}</strong> was <strong>{{ action_text }}</strong>.</p>
+{% if site_url %}<p><a href="{{ site_url }}/dashboard/owner/" style="display:inline-block;background:#111;color:#fff;text-decoration:none;border-radius:999px;padding:12px 20px;font-weight:800;">Open owner dashboard</a></p>{% endif %}
+{% endblock %}

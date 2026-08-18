@@ -1,0 +1,5 @@
+{% extends 'emails/base_email.html' %}
+{% block email_content %}
+<p>Hi {{ owner.username }},</p>
+<p>Your gym <strong>{{ gym.name }}</strong> was <strong>{{ action_text }}</strong>.</p>
+{% endblock %}
