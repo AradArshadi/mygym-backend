@@ -184,6 +184,12 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_THROTTLE_RATES': {
+        'login': config(
+            'API_LOGIN_THROTTLE_RATE',
+            default='5/min',
+        ),
+    },
 }
 
 SPECTACULAR_SETTINGS = {

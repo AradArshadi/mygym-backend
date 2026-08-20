@@ -3,11 +3,14 @@ from django.db import IntegrityError
 from django.db.models import Avg, Count, Q
 from django.middleware.csrf import get_token
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_protect
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.analytics.services import get_peak_hour_data
+from apps.api.throttles import LoginRateThrottle
 from apps.bookings.models import Booking, GymSubscription, GymVisit, Session
 from apps.bookings.services import (
     attach_membership_qr,
@@ -168,19 +171,35 @@ class MeAPIView(APIView):
         return Response({'authenticated': request.user.is_authenticated, 'user': _user(request.user)})
 
 
+@method_decorator(csrf_protect, name="dispatch")
 class LoginAPIView(APIView):
     permission_classes = []
     authentication_classes = []
+    throttle_classes = [LoginRateThrottle]
 
     def post(self, request):
-        username = str(request.data.get('username', '')).strip()
-        password = str(request.data.get('password', ''))
-        user = authenticate(request, username=username, password=password)
+        username = str(request.data.get("username", "")).strip()
+        password = str(request.data.get("password", ""))
+
+        user = authenticate(
+            request,
+            username=username,
+            password=password,
+        )
+
         if not user:
-            return Response({'detail': 'Username or password is incorrect.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Username or password is incorrect."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         login(request, user)
         get_token(request)
-        return Response({'ok': True, 'user': _user(user)})
+
+        return Response({
+            "ok": True,
+            "user": _user(user),
+        })
 
 
 class LogoutAPIView(APIView):
