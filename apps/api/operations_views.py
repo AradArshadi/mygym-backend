@@ -194,7 +194,9 @@ class OwnerGymAPIView(APIView):
                   related_model='Gym', related_id=gym.id, message=f'Created {gym.name}')
         return Response(gym_data(gym), status=201)
 
-    def put(self, request, gym_id):
+    def put(self, request, gym_id=None):
+        if gym_id is None:
+            raise ValidationError('Choose a gym to update.')
         gym = get_object_or_404(gym_scope(request.user), pk=gym_id)
         gym = save_form(GymForm(request.data, instance=gym))
         log_event(category='GYM', event='operations_gym_updated', actor=request.user, request=request,
@@ -205,7 +207,9 @@ class OwnerGymAPIView(APIView):
 class OwnerGymResourceAPIView(APIView):
     permission_classes = [IsOwnerOrStaffAdmin]
 
-    def post(self, request, gym_id, resource):
+    def post(self, request, gym_id, resource, resource_id=None):
+        if resource_id is not None:
+            raise ValidationError('Add a resource through its collection URL.')
         gym = get_object_or_404(gym_scope(request.user), pk=gym_id)
         forms = {'plans': MembershipPlanForm, 'trainers': TrainerProfileForm}
         if resource not in forms:
@@ -219,7 +223,9 @@ class OwnerGymResourceAPIView(APIView):
                   related_model=obj.__class__.__name__, related_id=obj.id, message=f'Added {resource} to {gym.name}')
         return Response({'id': obj.id}, status=201)
 
-    def delete(self, request, gym_id, resource, resource_id):
+    def delete(self, request, gym_id, resource, resource_id=None):
+        if resource_id is None:
+            raise ValidationError('Choose a resource to delete.')
         gym = get_object_or_404(gym_scope(request.user), pk=gym_id)
         models = {'plans': MembershipPlan, 'trainers': TrainerProfile}
         if resource not in models:
