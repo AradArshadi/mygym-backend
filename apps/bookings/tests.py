@@ -55,7 +55,9 @@ class BookingInfrastructureTests(TestCase):
             duration_days=30,
             is_trial=False,
         )
-        self.when = timezone.make_aware(datetime(2026, 8, 5, 14, 0), timezone.get_current_timezone())
+        # Membership check-in fixtures must be active regardless of the date
+        # the suite runs. Specific parsing dates are tested separately below.
+        self.when = timezone.now()
 
     def make_booking(self, *, plan=None, status=Booking.Status.PENDING):
         return Booking.objects.create(

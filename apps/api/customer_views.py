@@ -54,6 +54,8 @@ def _user(user):
         'name': user.get_full_name() or user.username,
         'phone': getattr(user, 'phone', ''),
         'role': getattr(user, 'role', ''),
+        'is_staff': user.is_staff,
+        'is_superuser': user.is_superuser,
         'member_since': _date(user.date_joined.date()) if user.date_joined else None,
     }
 

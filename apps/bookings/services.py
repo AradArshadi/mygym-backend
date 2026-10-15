@@ -224,6 +224,9 @@ def start_gym_visit(*, customer, gym, actor, entry_method, session=None, subscri
     from .models import GymVisit
 
     with transaction.atomic():
+        # Serialize first-entry attempts even when no active visit exists yet.
+        # Locking an empty visit queryset cannot protect that case on MySQL.
+        customer.__class__.objects.select_for_update().get(pk=customer.pk)
         existing = (
             GymVisit.objects.select_for_update()
             .filter(customer=customer, status=GymVisit.Status.ACTIVE)
@@ -236,14 +239,15 @@ def start_gym_visit(*, customer, gym, actor, entry_method, session=None, subscri
             raise ValueError(f'Customer already has an active visit at {existing.gym.name}.')
 
         try:
-            visit = GymVisit.objects.create(
-                customer=customer,
-                gym=gym,
-                session=session,
-                subscription=subscription,
-                checked_in_by=actor,
-                entry_method=entry_method,
-            )
+            with transaction.atomic():
+                visit = GymVisit.objects.create(
+                    customer=customer,
+                    gym=gym,
+                    session=session,
+                    subscription=subscription,
+                    checked_in_by=actor,
+                    entry_method=entry_method,
+                )
         except IntegrityError:
             visit = GymVisit.objects.get(customer=customer, status=GymVisit.Status.ACTIVE)
             if visit.gym_id != gym.id:

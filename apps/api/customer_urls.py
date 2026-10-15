@@ -1,9 +1,10 @@
-from django.urls import path
+from django.urls import include, path
 from . import customer_views as views
 from . import views as core_views
 from .v1_gym_views import V1GymDetailAPIView
 
 urlpatterns = [
+    path('', include('apps.api.operations_urls')),
     path('auth/csrf/', views.CsrfAPIView.as_view(), name='react_csrf'),
     path('auth/me/', views.MeAPIView.as_view(), name='react_me'),
     path('auth/login/', views.LoginAPIView.as_view(), name='react_login'),
