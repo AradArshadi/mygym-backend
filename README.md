@@ -1,3 +1,144 @@
+# myGym
+
+> A full-stack gym discovery, booking, fitness tracking, and membership platform built with Django REST Framework and React.
+
+🌐 **Live Demo:** https://aradarshadi.pythonanywhere.com/
+
+---
+
+## Overview
+
+**myGym** is a full-stack web application designed around one idea:
+
+> Make discovering, joining, and interacting with gyms feel as simple and modern as using a consumer mobile app.
+
+Instead of building only a basic CRUD gym directory, I designed myGym as a broader platform where customers can:
+
+- discover nearby gyms,
+- compare gym information,
+- explore photos and facilities,
+- view membership plans,
+- book sessions,
+- save favorite gyms,
+- track visits,
+- follow fitness activity,
+- manage memberships,
+- read and write reviews,
+- receive notifications,
+- and interact with their account from a mobile-first interface.
+
+The project combines a mature Django backend with a React + TypeScript frontend and a versioned REST API.
+
+A large part of the engineering work has focused not only on adding features, but also on solving real integration problems involving authentication, CSRF protection, responsive layouts, API contracts, SPA routing, deployment, and frontend/backend migration.
+
+---
+
+# Why I Built It
+
+Many gym applications are either:
+
+1. simple directories,
+2. internal gym-management systems,
+3. or basic booking applications.
+
+I wanted to explore what a **gym marketplace + customer fitness platform** could look like.
+
+The project gradually evolved into a system containing several domains:
+
+- gym discovery,
+- bookings,
+- memberships,
+- visits,
+- fitness activity,
+- reviews,
+- notifications,
+- analytics,
+- gym-owner functionality,
+- and administrative tooling.
+
+The main technical challenge became designing these systems so they could work together through a clean API instead of becoming tightly coupled Django pages.
+
+---
+
+# Tech Stack
+
+## Backend
+
+- Python
+- Django 5
+- Django REST Framework
+- MySQL in production
+- SQLite supported for local development
+- DRF Spectacular / OpenAPI
+- Django sessions
+- CSRF protection
+- Django Admin
+
+## Frontend
+
+- React
+- TypeScript
+- Vite
+- React Router
+- TanStack Query
+- Leaflet
+- Mobile-first responsive CSS
+- Progressive Web App architecture
+
+## Infrastructure / Deployment
+
+- PythonAnywhere
+- Django serving the React SPA entry point
+- Static Vite asset deployment
+- HTTPS production configuration
+- ImgBB for externally hosted gym images
+
+---
+
+# High-Level Architecture
+
+```text
+                    ┌────────────────────────────┐
+                    │        React Client        │
+                    │                            │
+                    │  Home / Explore / Booking  │
+                    │  Visit / Activity / Profile│
+                    └─────────────┬──────────────┘
+                                  │
+                                  │ /api/v1/*
+                                  ▼
+                    ┌────────────────────────────┐
+                    │    Django REST Framework   │
+                    │                            │
+                    │ Authentication             │
+                    │ Gyms                       │
+                    │ Bookings                   │
+                    │ Memberships                │
+                    │ Visits                     │
+                    │ Fitness                    │
+                    │ Reviews                    │
+                    │ Notifications              │
+                    │ Analytics                  │
+                    └─────────────┬──────────────┘
+                                  │
+                                  ▼
+                    ┌────────────────────────────┐
+                    │          Database          │
+                    │                            │
+                    │      MySQL / SQLite        │
+                    └────────────────────────────┘
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## v3 additions
 
