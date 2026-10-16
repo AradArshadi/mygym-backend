@@ -20,9 +20,9 @@ from apps.analytics.services import get_gym_analytics, get_owner_portfolio_analy
 from apps.bookings.models import Booking, GymCheckIn, GymSubscription
 from apps.emails.services import send_app_email
 from apps.fitness.models import WorkoutLog
-from apps.fitness.services import fitness_summary, normalize_activity_days, training_activity_calendar
+from apps.fitness.services import fitness_summary, normalize_activity_days, training_activity_calendar, _aware_day_start
 from apps.gyms.forms import GymImageForm
-from apps.gyms.models import Gym, GymImage
+from apps.gyms.models import Facility, Gym, GymImage
 from apps.reviews.models import Favorite, Review
 from apps.systemlogs.models import SystemLog
 from apps.systemlogs.services import log_event
@@ -64,6 +64,9 @@ def _user_public(user):
 
 
 def _gym_image_url(gym):
+    if hasattr(gym, 'display_images'):
+        images = gym.display_images
+        return next((item.image_url for item in images if item.image_url), '')
     image = getattr(gym, 'cover_image', None)
     if image:
         return image.image_url
@@ -74,8 +77,8 @@ def _gym_image_url(gym):
 
 
 def _gym_summary(gym, request=None):
-    is_favorite = False
-    if request and request.user.is_authenticated:
+    is_favorite = getattr(gym, '_is_favorite', False)
+    if not hasattr(gym, '_is_favorite') and request and request.user.is_authenticated:
         is_favorite = Favorite.objects.filter(user=request.user, gym=gym).exists()
     return {
         'id': gym.id,
@@ -89,7 +92,8 @@ def _gym_summary(gym, request=None):
         'status_label': gym.get_status_display(),
         'rating': float(getattr(gym, 'avg_rating', 0) or 0),
         'review_count': getattr(gym, 'review_count', 0) or 0,
-        'favorite_count': getattr(gym, 'favorite_count', 0) or Favorite.objects.filter(gym=gym).count(),
+        'favorite_count': gym.favorite_count if hasattr(gym, 'favorite_count') else Favorite.objects.filter(gym=gym).count(),
+        'facilities': [{'id': item.id, 'name': item.name, 'icon': item.icon} for item in gym.facilities.all()],
         'is_favorite': is_favorite,
         'cover_image': _gym_image_url(gym),
         'detail_url': gym.get_absolute_url(),
@@ -391,6 +395,12 @@ class OwnerGymAnalyticsAPIView(APIView):
 # Gyms / Favorites API
 # -----------------------------------------------------------------------------
 
+class ExploreFilterInput(serializers.Serializer):
+    max_price = serializers.DecimalField(max_digits=8, decimal_places=2, min_value=0, required=False)
+    min_rating = serializers.DecimalField(max_digits=3, decimal_places=2, min_value=0, max_value=5, required=False)
+    facilities = serializers.ListField(child=serializers.IntegerField(min_value=1), required=False)
+
+
 class GymListAPIView(APIView):
     permission_classes = []
 
@@ -406,9 +416,16 @@ class GymListAPIView(APIView):
             OpenApiParameter('max_price', str, OpenApiParameter.QUERY, description='Maximum starting price.'),
             OpenApiParameter('min_rating', str, OpenApiParameter.QUERY, description='Minimum average rating.'),
             OpenApiParameter('sort', str, OpenApiParameter.QUERY, description='newest, rating, price_asc, price_desc, or name.'),
+            OpenApiParameter('facilities', int, OpenApiParameter.QUERY, many=True, description='Repeat to require all selected facility IDs.'),
         ],
     )
     def get(self, request):
+        filters = ExploreFilterInput(data={key: value for key, value in {
+            'max_price': request.query_params.get('max_price'),
+            'min_rating': request.query_params.get('min_rating'),
+            'facilities': request.query_params.getlist('facilities'),
+        }.items() if value not in (None, '', [])})
+        filters.is_valid(raise_exception=True)
         qs = (
             Gym.objects.filter(status=Gym.Status.APPROVED)
             .prefetch_related(
@@ -427,18 +444,12 @@ class GymListAPIView(APIView):
             qs = qs.filter(Q(name__icontains=q) | Q(description__icontains=q) | Q(city__icontains=q) | Q(address__icontains=q) | Q(facilities__name__icontains=q)).distinct()
         if city:
             qs = qs.filter(city__iexact=city)
-        max_price = request.query_params.get('max_price', '').strip()
-        if max_price:
-            try:
-                qs = qs.filter(starting_price__lte=max_price)
-            except (TypeError, ValueError):
-                return Response({'detail': 'max_price must be a number.'}, status=status.HTTP_400_BAD_REQUEST)
-        min_rating = request.query_params.get('min_rating', '').strip()
-        if min_rating:
-            try:
-                qs = qs.filter(avg_rating__gte=float(min_rating))
-            except (TypeError, ValueError):
-                return Response({'detail': 'min_rating must be a number.'}, status=status.HTTP_400_BAD_REQUEST)
+        if 'max_price' in filters.validated_data:
+            qs = qs.filter(starting_price__lte=filters.validated_data['max_price'])
+        if 'min_rating' in filters.validated_data:
+            qs = qs.filter(avg_rating__gte=filters.validated_data['min_rating'])
+        for facility_id in filters.validated_data.get('facilities', []):
+            qs = qs.filter(facilities__id=facility_id)
         sort = request.query_params.get('sort', 'newest')
         sort_options = {
             'newest': '-created_at',
@@ -447,7 +458,7 @@ class GymListAPIView(APIView):
             'price_desc': '-starting_price',
             'name': 'name',
         }
-        qs = qs.order_by(sort_options.get(sort, '-created_at'), 'name')
+        qs = qs.order_by(sort_options.get(sort, '-created_at'), 'name', 'id').distinct()
         try:
             page_size = min(max(int(request.query_params.get('page_size', 20) or 20), 1), 50)
         except (TypeError, ValueError):
@@ -455,14 +466,22 @@ class GymListAPIView(APIView):
         paginator = Paginator(qs, page_size)
         page_number = request.query_params.get('page') or 1
         page = paginator.get_page(page_number)
+        items = list(page.object_list)
+        favorite_ids = set(Favorite.objects.filter(user=request.user, gym__in=items).values_list('gym_id', flat=True)) if request.user.is_authenticated else set()
+        for gym in items:
+            gym._is_favorite = gym.id in favorite_ids
         return Response({
+            'filters': {
+                'cities': list(Gym.objects.filter(status=Gym.Status.APPROVED).exclude(city='').order_by('city').values_list('city', flat=True).distinct()),
+                'facilities': list(Facility.objects.filter(gyms__status=Gym.Status.APPROVED).order_by('name').values('id', 'name').distinct()),
+            },
             'count': paginator.count,
             'page': page.number,
             'page_size': page_size,
             'num_pages': paginator.num_pages,
             'has_next': page.has_next(),
             'has_previous': page.has_previous(),
-            'results': [_gym_summary(gym, request) for gym in page.object_list],
+            'results': [_gym_summary(gym, request) for gym in items],
         })
 
 
@@ -637,11 +656,18 @@ class FitnessActivityAPIView(APIView):
 
 
 class WorkoutLogListCreateAPIView(APIView):
-    @extend_schema(tags=['Fitness'], summary='List current user workout logs.')
+    @extend_schema(tags=['Fitness'], summary='List current user workout logs.', parameters=[
+        OpenApiParameter('date', str, OpenApiParameter.QUERY, description='Optional YYYY-MM-DD in the active application timezone for daily activity details.'),
+    ])
     def get(self, request):
         if not request.user.is_authenticated:
             return Response({'detail': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
-        qs = WorkoutLog.objects.filter(user=request.user)[:100]
+        qs = WorkoutLog.objects.filter(user=request.user)
+        if request.query_params.get('date'):
+            from datetime import timedelta
+            day = serializers.DateField().run_validation(request.query_params['date'])
+            qs = qs.filter(logged_at__gte=_aware_day_start(day), logged_at__lt=_aware_day_start(day + timedelta(days=1)))
+        qs = qs[:100]
         return Response({'results': WorkoutLogSerializer(qs, many=True).data})
 
     @extend_schema(

@@ -145,6 +145,13 @@ class OwnerDashboardAPIView(APIView):
 
     def get(self, request):
         gyms = gym_scope(request.user)
+        all_gyms = gyms
+        selected_gym = request.query_params.get('gym_id')
+        if selected_gym:
+            if not selected_gym.isdecimal():
+                raise ValidationError({'gym_id': 'Choose a valid gym.'})
+            selected = get_object_or_404(gyms, pk=selected_gym)
+            gyms = gyms.filter(pk=selected.pk)
         today = timezone.localdate()
         bookings = Booking.objects.filter(gym__in=gyms).select_related('gym', 'customer', 'plan')
         members = GymSubscription.objects.filter(gym__in=gyms, status='ACTIVE', start_date__lte=today,
@@ -155,7 +162,8 @@ class OwnerDashboardAPIView(APIView):
             'stats': {'gyms': gyms.count(), 'pending_bookings': bookings.filter(status='PENDING').count(),
                       'active_members': members.values('customer_id').distinct().count(),
                       'active_visits': visits.count(), 'checkins_today': checkins.count()},
-            'gyms': [gym_data(item) for item in gyms.prefetch_related('facilities')],
+            'gyms': [gym_data(item) for item in all_gyms.prefetch_related('facilities')],
+            'pending_requests': [booking_data(item) for item in bookings.filter(status='PENDING').order_by('booking_datetime')[:5]],
             'bookings': paginate(request, bookings.order_by('-created_at'), booking_data),
             'members': [{'id': sub.id, 'customer': person(sub.customer), 'gym': sub.gym.name,
                          'plan': sub.plan.title if sub.plan else 'Membership', 'end_date': sub.end_date.isoformat()}
