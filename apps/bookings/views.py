@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -20,6 +21,7 @@ from .services import (
     absolute_url,
     attach_membership_qr,
     attach_session_qr,
+    cancel_customer_booking,
     cancel_operational_records_for_booking,
     create_operational_records_for_confirmed_booking,
     membership_checkin_url,
@@ -140,7 +142,20 @@ def update_booking_status(request, booking_id, status):
         return redirect('owner_dashboard')
 
     with transaction.atomic():
+        booking = get_object_or_404(
+            Booking.objects.select_for_update().select_related('gym', 'customer', 'plan'),
+            id=booking_id, gym__owner=request.user,
+        )
         old_status = booking.status
+        if old_status == new_status:
+            messages.info(request, 'This booking already has that status.')
+            return redirect('owner_dashboard')
+        if old_status in {Booking.Status.CANCELLED, Booking.Status.REJECTED}:
+            messages.warning(request, 'Closed bookings cannot be reopened.')
+            return redirect('owner_dashboard')
+        if old_status == Booking.Status.CONFIRMED and new_status == Booking.Status.REJECTED:
+            messages.warning(request, 'Cancel a confirmed booking instead of rejecting it.')
+            return redirect('owner_dashboard')
         booking.status = new_status
         booking.save(update_fields=['status'])
 
@@ -188,19 +203,16 @@ def cancel_own_booking(request, booking_id):
         messages.error(request, 'Invalid request method.')
         return redirect('customer_dashboard')
 
-    booking = get_object_or_404(
-        Booking.objects.select_related('gym'),
-        id=booking_id,
-        customer=request.user,
-    )
-
-    if booking.status in [Booking.Status.CANCELLED, Booking.Status.REJECTED]:
-        messages.warning(request, 'This booking is already closed.')
+    try:
+        booking = cancel_customer_booking(
+            customer=request.user, booking_id=booking_id, actor=request.user,
+            request=request, reason='Cancelled by customer.')
+    except Booking.DoesNotExist:
+        # Preserve the customer-scoped 404 response of the legacy endpoint.
+        raise Http404('Booking not found.')
+    except ValueError as exc:
+        messages.warning(request, str(exc))
         return redirect('customer_dashboard')
-
-    booking.status = Booking.Status.CANCELLED
-    booking.save(update_fields=['status'])
-    cancel_operational_records_for_booking(booking, actor=request.user, request=request, reason='Cancelled by customer.')
 
     create_notification_safely(
         request=request,
@@ -249,26 +261,27 @@ def cancel_session(request, session_id):
     if request.method != 'POST':
         messages.error(request, 'Invalid request method.')
         return redirect('my_sessions')
-    session = get_object_or_404(Session.objects.select_related('booking', 'gym'), id=session_id, customer=request.user)
-    if session.status != Session.Status.UPCOMING:
-        messages.warning(request, 'Only upcoming sessions can be cancelled.')
+    try:
+        booking = cancel_customer_booking(
+            customer=request.user, session_id=session_id, actor=request.user,
+            request=request, reason='Cancelled by customer from My Sessions.')
+    except (Session.DoesNotExist, Booking.DoesNotExist):
+        raise Http404('Session not found.')
+    except ValueError as exc:
+        messages.warning(request, str(exc))
         return redirect('my_sessions')
-
-    session.cancel('Cancelled by customer from My Sessions.')
-    session.booking.status = Booking.Status.CANCELLED
-    session.booking.save(update_fields=['status'])
 
     create_notification_safely(
         request=request,
-        recipient=session.gym.owner,
+        recipient=booking.gym.owner,
         sender=request.user,
         kind=Notification.Kind.BOOKING,
         title='Session cancelled by customer',
-        message=f'{request.user.username} cancelled a session for {session.gym.name}.',
+        message=f'{request.user.username} cancelled a session for {booking.gym.name}.',
         url='/dashboard/owner/',
     )
 
-    log_event(level='INFO', category='SESSION', event='session_cancelled_by_customer', message=f'Session {session.id} cancelled by customer', actor=request.user, request=request, related_model='Session', related_id=session.id)
+    log_event(level='INFO', category='SESSION', event='session_cancelled_by_customer', message=f'Session {session_id} cancelled by customer', actor=request.user, request=request, related_model='Session', related_id=session_id)
     messages.success(request, 'Session cancelled.')
     return redirect('my_sessions')
 

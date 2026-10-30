@@ -15,7 +15,7 @@ from apps.bookings.models import Booking, GymSubscription, GymVisit, Session
 from apps.bookings.services import (
     attach_membership_qr,
     attach_session_qr,
-    cancel_operational_records_for_booking,
+    cancel_customer_booking,
     complete_gym_visit,
     normalize_booking_datetime,
     refresh_due_membership_qrs_for_user,
@@ -363,14 +363,13 @@ class CancelSessionAPIView(APIView):
         if not request.user.is_authenticated:
             return Response({'detail': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
         try:
-            session = Session.objects.select_related('booking', 'gym').get(id=session_id, customer=request.user)
-        except Session.DoesNotExist:
+            cancel_customer_booking(
+                customer=request.user, session_id=session_id, actor=request.user,
+                request=request, reason='Cancelled by customer from React app.')
+        except (Session.DoesNotExist, Booking.DoesNotExist):
             return Response({'detail': 'Session not found.'}, status=status.HTTP_404_NOT_FOUND)
-        if session.status != Session.Status.UPCOMING:
-            return Response({'detail': 'Only upcoming sessions can be cancelled.'}, status=status.HTTP_400_BAD_REQUEST)
-        session.cancel('Cancelled by customer from React app.')
-        session.booking.status = Booking.Status.CANCELLED
-        session.booking.save(update_fields=['status'])
+        except ValueError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response({'ok': True})
 
 
@@ -379,14 +378,13 @@ class CancelBookingAPIView(APIView):
         if not request.user.is_authenticated:
             return Response({'detail': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
         try:
-            booking = Booking.objects.select_related('gym').get(id=booking_id, customer=request.user)
+            cancel_customer_booking(
+                customer=request.user, booking_id=booking_id, actor=request.user,
+                request=request, reason='Cancelled by customer.')
         except Booking.DoesNotExist:
             return Response({'detail': 'Booking not found.'}, status=status.HTTP_404_NOT_FOUND)
-        if booking.status in {Booking.Status.CANCELLED, Booking.Status.REJECTED}:
-            return Response({'detail': 'This booking is already closed.'}, status=status.HTTP_400_BAD_REQUEST)
-        booking.status = Booking.Status.CANCELLED
-        booking.save(update_fields=['status'])
-        cancel_operational_records_for_booking(booking, actor=request.user, request=request, reason='Cancelled by customer.')
+        except ValueError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response({'ok': True})
 
 

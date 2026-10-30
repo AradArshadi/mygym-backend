@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.conf import settings
+from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
@@ -172,14 +173,16 @@ def create_operational_records_for_confirmed_booking(booking, *, actor=None, req
     return session, subscription
 
 
+@transaction.atomic
 def cancel_operational_records_for_booking(booking, *, actor=None, request=None, reason='Booking closed.'):
     """Cancel linked operational records when a confirmed booking is cancelled/rejected."""
     cancelled = {'session': False, 'subscription': False}
 
-    try:
-        session = booking.session
-    except Session.DoesNotExist:
-        session = None
+    # Read fresh locked records rather than possibly stale reverse-relation caches.
+    # QR validation locks these same credentials before admitting a customer.
+    # Acquire both before writing audit records that reference the customer.
+    session = Session.objects.select_for_update().filter(booking_id=booking.pk).first()
+    subscription = GymSubscription.objects.select_for_update().filter(source_booking_id=booking.pk).first()
 
     if session and session.status != Session.Status.CANCELLED:
         session.cancel(reason)
@@ -194,11 +197,6 @@ def cancel_operational_records_for_booking(booking, *, actor=None, request=None,
             related_model='Session',
             related_id=session.id,
         )
-
-    try:
-        subscription = booking.subscription
-    except GymSubscription.DoesNotExist:
-        subscription = None
 
     if subscription and subscription.status == GymSubscription.Status.ACTIVE:
         subscription.status = GymSubscription.Status.CANCELLED
@@ -216,6 +214,42 @@ def cancel_operational_records_for_booking(booking, *, actor=None, request=None,
         )
 
     return cancelled
+
+
+@transaction.atomic
+def cancel_customer_booking(*, customer, booking_id=None, session_id=None,
+                            actor=None, request=None, reason='Cancelled by customer.'):
+    """Cancel a customer's booking and only the access granted by that booking.
+
+    Cancelling an upcoming session currently also cancels its source booking.
+    Keep those semantics consistent with booking cancellation, including revoking
+    the linked membership. A future visit-only cancellation needs a distinct
+    policy rather than leaving a cancelled booking with active access.
+    """
+    if (booking_id is None) == (session_id is None):
+        raise ValueError('Provide exactly one booking or session.')
+
+    if session_id is not None:
+        booking_id = (Session.objects.filter(pk=session_id, customer=customer)
+                      .values_list('booking_id', flat=True).first())
+        if booking_id is None:
+            raise Session.DoesNotExist
+
+    # Serialize with owner/admin booking decisions before changing any state.
+    booking = Booking.objects.select_for_update().get(pk=booking_id, customer=customer)
+    if session_id is not None:
+        session = Session.objects.select_for_update().get(
+            pk=session_id, booking_id=booking.pk, customer=customer)
+        if session.status != Session.Status.UPCOMING:
+            raise ValueError('Only upcoming sessions can be cancelled.')
+    if booking.status in {Booking.Status.CANCELLED, Booking.Status.REJECTED}:
+        raise ValueError('This booking is already closed.')
+
+    booking.status = Booking.Status.CANCELLED
+    booking.save(update_fields=['status'])
+    cancel_operational_records_for_booking(
+        booking, actor=actor or customer, request=request, reason=reason)
+    return booking
 
 
 def start_gym_visit(*, customer, gym, actor, entry_method, session=None, subscription=None, request=None):

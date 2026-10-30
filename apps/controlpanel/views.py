@@ -283,7 +283,20 @@ def update_booking_status(request, booking_id, action):
 
     new_status = mapping[action]
     with transaction.atomic():
+        booking = get_object_or_404(
+            Booking.objects.select_for_update().select_related('customer', 'gym', 'gym__owner', 'plan'),
+            id=booking_id,
+        )
         old_status = booking.status
+        if old_status == new_status:
+            messages.info(request, 'This booking already has that status.')
+            return redirect('control_bookings')
+        if old_status in {Booking.Status.CANCELLED, Booking.Status.REJECTED}:
+            messages.warning(request, 'Closed bookings cannot be reopened.')
+            return redirect('control_bookings')
+        if old_status == Booking.Status.CONFIRMED and new_status in {Booking.Status.PENDING, Booking.Status.REJECTED}:
+            messages.warning(request, 'Cancel a confirmed booking instead of resetting or rejecting it.')
+            return redirect('control_bookings')
         booking.status = new_status
         booking.save(update_fields=['status'])
 

@@ -11,6 +11,8 @@ urlpatterns = [
     path('memberships/check-in/<uuid:token>/', views.membership_check_in, name='membership_check_in'),
     path('visits/<int:visit_id>/checkout/', views.checkout_visit, name='checkout_visit'),
     path('create/<int:gym_id>/', views.create_booking, name='create_booking'),
-    path('<int:booking_id>/<str:status>/', views.update_booking_status, name='update_booking_status'),
     path('<int:booking_id>/cancel/', views.cancel_own_booking, name='cancel_own_booking'),
+    path('<int:booking_id>/status/<str:status>/', views.update_booking_status, name='update_booking_status'),
+    # Retain older confirm/reject links; cancellation has its own customer URL.
+    path('<int:booking_id>/<str:status>/', views.update_booking_status, name='legacy_update_booking_status'),
 ]
